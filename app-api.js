@@ -77,8 +77,22 @@ function same(want, got) {
 }
 async function sha(text) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
 
-// מצב מפתח: קוד ב-ADMIN_PIN
-function adminOk(req) { return same(process.env.ADMIN_PIN, req.headers.get('x-admin-pin')); }
+// כניסת ניהול: קוד מפתח (ADMIN_PIN) או קוד מנהל.
+// קודי מנהל: במשתנה MANAGER_CODES בפורמט "שם:קוד,שם:קוד", ו/או קודים שהמפתח מוסיף באפליקציה (נשמרים מוצפנים).
+function envManagers() {
+  return String(process.env.MANAGER_CODES || '').split(',').map(x => x.trim()).filter(Boolean).map((x, i) => {
+    const k = x.lastIndexOf(':'); return k > 0 ? { id: 'env' + i, name: x.slice(0, k).trim(), code: x.slice(k + 1).trim(), env: true } : null;
+  }).filter(m => m && m.code.length >= 4);
+}
+async function adminRole(req, s) {
+  const code = String(req.headers.get('x-admin-pin') || '');
+  if (!code) return null;
+  if (same(process.env.ADMIN_PIN, code)) return { role: 'dev', name: 'מפתח' };
+  for (const m of envManagers()) if (same(m.code, code)) return { role: 'manager', name: m.name, mid: m.id };
+  const list = (await s.get('managers', { type: 'json' })) || [];
+  for (const m of list) if (m.active !== false && m.hash && (await sha(m.salt + ':' + code)) === m.hash) return { role: 'manager', name: m.name, mid: m.id };
+  return null;
+}
 // השליח הראשי (לירון): נכנס עם COURIER_PIN בלבד
 const MAIN = () => ({ id: 'main', name: process.env.COURIER_NAME || 'לירון', phone: process.env.COURIER_PHONE || '0525068475', active: true });
 
@@ -87,7 +101,8 @@ const pubCourier = c => ({ id: c.id, name: c.name, phone: c.phone, active: c.act
 
 // מזהה מי מבצע את הבקשה: מפתח, שליח עם סשן, או השליח הראשי עם קוד
 async function who(req, s) {
-  if (adminOk(req)) return { id: 'admin', name: 'מפתח', admin: true };
+  const ar = await adminRole(req, s);
+  if (ar) return { id: 'admin', name: ar.name, admin: true };
   const tok = String(req.headers.get('x-courier-token') || '');
   if (/^[0-9a-f]{40}$/.test(tok)) {
     const ses = await s.get('sess:' + tok, { type: 'json' });
@@ -204,8 +219,35 @@ export default async (req) => {
 
   // ---------- מצב מפתח ----------
   if (a.startsWith('admin')) {
-    if (!adminOk(req)) { await sleep(900); return json(401, { error: 'קוד מפתח שגוי' }); }
-    if (a === 'admin-login') return json(200, { ok: true });
+    const role = await adminRole(req, s);
+    if (!role) { await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
+    if (a === 'admin-login') return json(200, { ok: true, role: role.role, name: role.name });
+    // ניהול קודי מנהל: רק למפתח
+    if (a.startsWith('admin-manager') && role.role !== 'dev') return json(403, { error: 'רק המפתח יכול לנהל קודי מנהל' });
+    if (a === 'admin-managers') {
+      const list = (await s.get('managers', { type: 'json' })) || [];
+      return json(200, { managers: [...envManagers().map(m => ({ id: m.id, name: m.name, env: true, active: true })), ...list.map(m => ({ id: m.id, name: m.name, active: m.active !== false, createdAt: m.createdAt, lastLogin: m.lastLogin || null }))] });
+    }
+    if (a === 'admin-manager-save' && req.method === 'POST') {
+      const name = str(body.name, 40), code = str(body.code, 40);
+      if (!name) return json(400, { error: 'צריך שם למנהל' });
+      if (!/^\d{6,12}$/.test(code)) return json(400, { error: 'קוד מנהל: 6 עד 12 ספרות' });
+      if (same(process.env.ADMIN_PIN, code) || same(process.env.COURIER_PIN, code) || envManagers().some(m => same(m.code, code))) return json(409, { error: 'הקוד הזה כבר בשימוש. בחרו קוד אחר' });
+      const list = (await s.get('managers', { type: 'json' })) || [];
+      for (const m of list) if (m.hash && (await sha(m.salt + ':' + code)) === m.hash) return json(409, { error: 'הקוד הזה כבר בשימוש. בחרו קוד אחר' });
+      const salt = rnd(8);
+      list.push({ id: 'm' + rnd(4), name, salt, hash: await sha(salt + ':' + code), active: true, createdAt: Date.now() });
+      await s.setJSON('managers', list);
+      return json(200, { ok: true });
+    }
+    if (a === 'admin-manager-delete' && req.method === 'POST') {
+      const id = str(body.id, 20);
+      if (/^env/.test(id)) return json(400, { error: 'קוד שמוגדר ב-Netlify נמחק רק משם' });
+      const list = (await s.get('managers', { type: 'json' })) || [];
+      await s.setJSON('managers', list.filter(m => m.id !== id));
+      return json(200, { ok: true });
+    }
+    if (role.mid && !/^env/.test(role.mid)) { const list = (await s.get('managers', { type: 'json' })) || []; const m = list.find(x => x.id === role.mid); if (m && (!m.lastLogin || Date.now() - m.lastLogin > 3e5)) { m.lastLogin = Date.now(); await s.setJSON('managers', list); } }
     if (a === 'admin-list') {
       const orders = await readOrders(s, 1000);
       const list = await getCouriers(s);
