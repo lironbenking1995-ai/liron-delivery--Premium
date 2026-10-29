@@ -78,7 +78,7 @@ export default async (req) => {
   if (p.total > MAX_AMOUNT) return json(400, { error: 'הסכום המקסימלי לתשלום באתר הוא 10,000 ₪.' });
 
   const site = process.env.URL || new URL(req.url).origin;
-  const ref = 'L' + Date.now().toString(36).toUpperCase();
+  const ref = /^L[A-Z0-9]{6,14}$/.test(String(o.orderId || '')) ? String(o.orderId) : 'L' + Date.now().toString(36).toUpperCase();
   const desc = `${agreed ? 'סכום מתואם · ' : ''}${p.extra ? 'כולל תוספת ' + p.extra + '₪ · ' : ''}משלוח ${o.size || ''} · ${norm(o.fromCity)} ← ${norm(o.toCity)}`.slice(0, 200);
 
   const body = {
