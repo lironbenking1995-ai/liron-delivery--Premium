@@ -65,7 +65,7 @@ const str = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().sl
 const rnd = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return [...a].map(x => x.toString(16).padStart(2, '0')).join(''); };
 const newId = () => 'L' + Date.now().toString(36).toUpperCase().slice(-6) + rnd(2).toUpperCase();
 const ID_RE = /^L[A-Z0-9]{6,14}$/;
-const CID_RE = /^(main|c[0-9a-f]{8})$/;
+const CID_RE = /^(main|c[0-9a-f]{8}|e\d{1,2})$/;
 const phoneKey = p => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('972')) d = '0' + d.slice(3); return d; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -97,7 +97,28 @@ async function adminRole(req, s) {
 const MAIN = () => ({ id: 'main', name: process.env.COURIER_NAME || 'לירון', phone: process.env.COURIER_PHONE || '0525068475', active: true });
 
 async function getCouriers(s) { return (await s.get('couriers', { type: 'json' })) || []; }
-const pubCourier = c => ({ id: c.id, name: c.name, phone: c.phone, active: c.active !== false });
+// שליחים קבועים מ-Netlify: COURIER_CODES בפורמט "שם:קוד" או "שם:טלפון:קוד", מופרדים בפסיק
+function envCouriers() {
+  return String(process.env.COURIER_CODES || '').split(',').map(x => x.trim()).filter(Boolean).map((x, i) => {
+    const p = x.split(':').map(y => y.trim()); if (p.length < 2) return null;
+    const code = p[p.length - 1], phone = p.length >= 3 ? p[1] : '';
+    return code.length >= 4 ? { id: 'e' + i, name: p[0], phone: phone || (process.env.COURIER_PHONE || '0525068475'), code, env: true, active: true } : null;
+  }).filter(Boolean);
+}
+async function findCourier(s, id) { if (id === 'main') return MAIN(); const e = envCouriers().find(x => x.id === id); if (e) return e; return (await getCouriers(s)).find(x => x.id === id) || null; }
+// בודק אם קוד כבר בשימוש אצל מישהו (מפתח, מנהל, שליח)
+async function codeTaken(s, code, exceptId) {
+  if (same(process.env.ADMIN_PIN, code) || same(process.env.COURIER_PIN, code)) return true;
+  if (envManagers().some(m => same(m.code, code)) || envCouriers().some(c => same(c.code, code))) return true;
+  for (const m of ((await s.get('managers', { type: 'json' })) || [])) if (m.hash && (await sha(m.salt + ':' + code)) === m.hash) return true;
+  for (const c of await getCouriers(s)) if (c.id !== exceptId && c.hash && (await sha(c.salt + ':' + code)) === c.hash) return true;
+  return false;
+}
+async function genCode(s) {
+  for (let i = 0; i < 30; i++) { const a = new Uint32Array(1); crypto.getRandomValues(a); const c = String(100000 + (a[0] % 900000)); if (!(await codeTaken(s, c))) return c; }
+  throw new Error('לא הצלחנו ליצור קוד, נסו שוב');
+}
+const pubCourier = c => ({ id: c.id, name: c.name, phone: c.phone || process.env.COURIER_PHONE || '0525068475', active: c.active !== false });
 
 // מזהה מי מבצע את הבקשה: מפתח, שליח עם סשן, או השליח הראשי עם קוד
 async function who(req, s) {
@@ -107,8 +128,7 @@ async function who(req, s) {
   if (/^[0-9a-f]{40}$/.test(tok)) {
     const ses = await s.get('sess:' + tok, { type: 'json' });
     if (ses && ses.exp > Date.now()) {
-      if (ses.cid === 'main') return MAIN();
-      const c = (await getCouriers(s)).find(x => x.id === ses.cid);
+      const c = await findCourier(s, ses.cid);
       if (c && c.active !== false) return pubCourier(c);
     }
   }
@@ -197,21 +217,23 @@ export default async (req) => {
 
   // ---------- שליח: התחברות ----------
   if (a === 'login' && req.method === 'POST') {
-    const code = str(body.code, 40), ph = phoneKey(body.phone);
+    // כניסה עם הקוד האישי בלבד (הטלפון לא חובה)
+    const code = str(body.code, 40);
     let cid = null, me = null;
-    if (!ph && same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); }
-    else if (ph) {
-      if (phoneKey(MAIN().phone) === ph && same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); }
-      else {
-        const c = (await getCouriers(s)).find(x => phoneKey(x.phone) === ph);
-        if (c && c.active !== false && c.hash && (await sha(c.salt + ':' + code)) === c.hash) { cid = c.id; me = pubCourier(c); }
-        else if (c && c.active === false) { await sleep(700); return json(403, { error: 'החשבון שלך מושבת. פנה למנהל.' }); }
+    if (code.length >= 4) {
+      if (same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); }
+      if (!me) { const e = envCouriers().find(c => same(c.code, code)); if (e) { cid = e.id; me = pubCourier(e); } }
+      if (!me) for (const c of await getCouriers(s)) {
+        if (c.hash && (await sha(c.salt + ':' + code)) === c.hash) {
+          if (c.active === false) { await sleep(700); return json(403, { error: 'החשבון שלך מושבת. פנה למנהל.' }); }
+          cid = c.id; me = pubCourier(c); break;
+        }
       }
     }
-    if (!me) { await sleep(900); return json(401, { error: 'טלפון או קוד שגויים' }); }
+    if (!me) { await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
     const tok = rnd(20);
     await s.setJSON('sess:' + tok, { cid, exp: Date.now() + SESSION_DAYS * 864e5 });
-    if (cid !== 'main') {
+    if (cid.startsWith('c')) {
       const list = await getCouriers(s); const c = list.find(x => x.id === cid); if (c) { c.lastLogin = Date.now(); await s.setJSON('couriers', list); }
     }
     return json(200, { token: tok, courier: me });
@@ -251,9 +273,10 @@ export default async (req) => {
     if (a === 'admin-list') {
       const orders = await readOrders(s, 1000);
       const list = await getCouriers(s);
-      const all = [MAIN(), ...list.map(pubCourier)];
+      const all = [MAIN(), ...envCouriers().map(pubCourier), ...list.map(pubCourier)];
+      const envIds = new Set(envCouriers().map(c => c.id));
       const locs = {}; await Promise.all(all.map(async c => { const l = await locOf(s, c.id); if (l) locs[c.id] = l; }));
-      const couriers = all.map(c => ({ ...c, main: c.id === 'main', lastLogin: (list.find(x => x.id === c.id) || {}).lastLogin || null, loc: locs[c.id] || null }));
+      const couriers = all.map(c => ({ ...c, main: c.id === 'main', env: envIds.has(c.id), lastLogin: (list.find(x => x.id === c.id) || {}).lastLogin || null, loc: locs[c.id] || null }));
       const sys = {
         cardcom: !!(process.env.CARDCOM_TERMINAL && process.env.CARDCOM_API_NAME),
         terminal: process.env.CARDCOM_TERMINAL ? String(process.env.CARDCOM_TERMINAL).slice(-3) : null,
@@ -262,23 +285,47 @@ export default async (req) => {
       return json(200, { orders, couriers, sys });
     }
     if (a === 'admin-courier-save' && req.method === 'POST') {
-      const name = str(body.name, 40), phone = str(body.phone, 20), code = str(body.code, 40);
-      if (!name || phoneKey(phone).length < 9) return json(400, { error: 'צריך שם וטלפון תקין' });
+      const name = str(body.name, 40); let phone = str(body.phone, 20);
+      if (phone && phoneKey(phone) === phoneKey(process.env.COURIER_PHONE || '0525068475')) phone = '';
+      let code = str(body.code, 12);
+      if (!name) return json(400, { error: 'צריך שם לשליח' });
+      if (phone && phoneKey(phone).length < 9) return json(400, { error: 'מספר הטלפון לא תקין (אפשר גם להשאיר ריק)' });
       const list = await getCouriers(s);
-      const id = body.id && CID_RE.test(body.id) && body.id !== 'main' ? body.id : null;
-      if (list.some(x => phoneKey(x.phone) === phoneKey(phone) && x.id !== id) || phoneKey(MAIN().phone) === phoneKey(phone)) return json(409, { error: 'כבר יש שליח עם הטלפון הזה' });
+      const id = body.id && /^c[0-9a-f]{8}$/.test(body.id) ? body.id : null;
+      if (phone && list.some(x => x.phone && phoneKey(x.phone) === phoneKey(phone) && x.id !== id)) return json(409, { error: 'כבר יש שליח עם הטלפון הזה' });
       let c = id ? list.find(x => x.id === id) : null;
       if (id && !c) return json(404, { error: 'השליח לא נמצא' });
-      if (!c) { if (code.length < 4) return json(400, { error: 'קוד אישי של 4 תווים לפחות' }); c = { id: 'c' + rnd(4), createdAt: Date.now(), active: true }; list.push(c); }
-      c.name = name; c.phone = phone;
+      const isNew = !c;
+      if (isNew) { c = { id: 'c' + rnd(4), createdAt: Date.now(), active: true }; }
+      if (body.autoCode || (isNew && !code)) code = await genCode(s);
+      if (code) {
+        if (!/^\d{4,12}$/.test(code)) return json(400, { error: 'הקוד צריך להיות 4 עד 12 ספרות' });
+        if (await codeTaken(s, code, c.id)) return json(409, { error: 'הקוד הזה כבר בשימוש. בחרו קוד אחר' });
+        c.salt = rnd(8); c.hash = await sha(c.salt + ':' + code);
+      }
+      c.name = name; c.phone = phone || '';
       if (typeof body.active === 'boolean') c.active = body.active;
-      if (code) { if (code.length < 4) return json(400, { error: 'קוד אישי של 4 תווים לפחות' }); c.salt = rnd(8); c.hash = await sha(c.salt + ':' + code); }
+      if (isNew) list.push(c);
       await s.setJSON('couriers', list);
-      return json(200, { ok: true, courier: pubCourier(c) });
+      return json(200, { ok: true, courier: pubCourier(c), code: code || null });
+    }
+    if (a === 'admin-courier-bulk' && req.method === 'POST') {
+      const n = Math.min(20, Math.max(1, parseInt(body.count, 10) || 1));
+      const list = await getCouriers(s);
+      const used = new Set([...list.map(c => c.name), ...envCouriers().map(c => c.name)]);
+      let k = 1; const made = [];
+      for (let i = 0; i < n; i++) {
+        while (used.has('שליח ' + k)) k++;
+        const name = 'שליח ' + k; used.add(name);
+        const code = await genCode(s); const c = { id: 'c' + rnd(4), createdAt: Date.now(), active: true, name, phone: '' };
+        c.salt = rnd(8); c.hash = await sha(c.salt + ':' + code); list.push(c);
+        await s.setJSON('couriers', list); made.push({ name, code });
+      }
+      return json(200, { ok: true, made });
     }
     if (a === 'admin-courier-delete' && req.method === 'POST') {
       const id = str(body.id, 20);
-      if (!CID_RE.test(id) || id === 'main') return json(400, { error: 'לא ניתן למחוק את השליח הראשי' });
+      if (!/^c[0-9a-f]{8}$/.test(id)) return json(400, { error: 'את השליח הזה אפשר למחוק רק מ-Netlify' });
       const list = await getCouriers(s);
       await s.setJSON('couriers', list.filter(x => x.id !== id)); await s.delete('loc:' + id);
       return json(200, { ok: true });
@@ -310,7 +357,7 @@ export default async (req) => {
         return g ? { ok: true, detail: 'הכתובות מזוהות על המפה' } : { ok: false, warn: true, detail: 'שירות המפות לא ענה. האפליקציה עובדת, רק בלי סימון כתובות על המפה' };
       })) });
       const list = await getCouriers(s);
-      const all = [MAIN(), ...list.filter(c => c.active !== false)];
+      const all = [MAIN(), ...envCouriers(), ...list.filter(c => c.active !== false)];
       const sharing = (await Promise.all(all.map(c => locOf(s, c.id)))).filter(l => l && Date.now() - l.at < 10 * 60 * 1000).length;
       checks.push({ key: 'couriers', label: 'שליחים', ok: true, info: true, detail: all.length + ' שליחים פעילים · ' + (sharing ? sharing + ' משתפים מיקום עכשיו' : 'אף שליח לא משתף מיקום כרגע (תקין כשאין משלוח בדרך)') });
       return json(200, { checks, at: Date.now() });
@@ -331,7 +378,7 @@ export default async (req) => {
       if (body.assignedTo !== undefined) {
         if (!body.assignedTo) { o.assignedTo = null; o.courierName = null; o.courierPhone = null; }
         else {
-          const c = body.assignedTo === 'main' ? MAIN() : (await getCouriers(s)).find(x => x.id === body.assignedTo);
+          const c = await findCourier(s, body.assignedTo);
           if (!c) return json(400, { error: 'שליח לא קיים' });
           o.assignedTo = c.id; o.courierName = c.name; o.courierPhone = c.phone;
           if (o.status === 'new') { o.status = 'assigned'; o.history.push({ s: 'assigned', at: Date.now(), by: 'admin' }); }
