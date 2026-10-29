@@ -11,7 +11,7 @@ dl{margin:18px 0;display:grid;gap:8px;text-align:right}dl div{display:flex;justi
 a.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;border-radius:12px;font-weight:800;text-decoration:none}
 .p{background:var(--gold);color:#0a0a0a}.o{border:1px solid #ffffff50;color:#fff}
 </style></head><body>
-<main class="box" id="box"><div class="ic" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".3"></circle></svg></div><h1 id="t">בודקים את התשלום…</h1><p id="m">רק רגע.</p><dl id="d" hidden></dl><div class="btns" id="b" hidden></div></main>
+<main class="box" id="box"><div class="ic" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".3"></circle></svg></div><h1 id="t">בודקים את התשלום…</h1><p id="m">רק רגע.</p><dl id="d" hidden></dl><div class="btns" id="b" hidden></div><p style="margin:18px 0 0"><a href="https://www.liron-delivery.com/" style="color:#ffd12c;font-weight:800">🏠 יציאה לדף הראשי</a></p></main>
 <script>
 if(window.top!==window.self){try{window.top.location.href=location.href}catch(e){}}
 (function(){
@@ -28,7 +28,7 @@ function done(ok,info){
   var msg=ok&&saved?saved+'\n✅ התשלום התקבל'+(info&&info.deal?' · אסמכתא '+info.deal:''):ok?'שלום לירון, שילמתי באשראי '+(info&&info.amount?info.amount+'₪':'')+' על משלוח. מספר הזמנה: '+((info&&info.ref)||''):'שלום לירון, ניסיתי לשלם באשראי והתשלום לא עבר.';
   var b=document.getElementById('b');b.innerHTML='';
   var w=document.createElement('a');w.className='btn p';w.href='https://wa.me/'+WA+'?text='+encodeURIComponent(msg);w.target='_blank';w.rel='noopener';w.textContent=ok?'שליחת פרטי ההזמנה בוואטסאפ':'דברו איתנו בוואטסאפ';
-  var h=document.createElement('a');h.className='btn o';h.href=ok?'index.html':'index.html#order';h.textContent=ok?'חזרה לאתר':'חזרה להזמנה';
+  var h=document.createElement('a');h.className='btn o';h.href=ok?'https://www.liron-delivery.com/':'https://www.liron-delivery.com/#order';h.textContent=ok?'🏠 יציאה לדף הראשי':'חזרה להזמנה';
   b.appendChild(w);var tr='';try{tr=sessionStorage.getItem('ordTrack')||''}catch(e){}if(ok&&tr){var t=document.createElement('a');t.className='btn o';t.href=tr;t.textContent='📍 מעקב חי אחרי השליח';b.appendChild(t);}b.appendChild(h);b.hidden=false;
 }
 if(!id){done(false);return;}
