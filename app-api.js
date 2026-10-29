@@ -65,13 +65,15 @@ const rnd = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); retur
 const newId = () => 'L' + Date.now().toString(36).toUpperCase().slice(-6) + rnd(2).toUpperCase();
 const ID_RE = /^L[A-Z0-9]{6,14}$/;
 
-function pinOk(req) {
-  const want = String(process.env.COURIER_PIN || '');
-  const got = String(req.headers.get('x-courier-pin') || '');
+function same(want, got) {
+  want = String(want || ''); got = String(got || '');
   if (!want || want.length < 4 || got.length !== want.length) return false;
   let d = 0; for (let i = 0; i < want.length; i++) d |= want.charCodeAt(i) ^ got.charCodeAt(i);
   return d === 0;
 }
+// מצב מפתח: קוד ב-ADMIN_PIN. מי שמחובר כמפתח יכול גם כל פעולה של שליח.
+function adminOk(req) { return same(process.env.ADMIN_PIN, req.headers.get('x-admin-pin')); }
+function pinOk(req) { return adminOk(req) || same(process.env.COURIER_PIN, req.headers.get('x-courier-pin')); }
 
 async function geocode(street, city) {
   if (!city) return null;
@@ -147,6 +149,48 @@ export default async (req) => {
     if (!o || o.token !== token) return json(404, { error: 'לא מצאנו משלוח עם הקוד הזה' });
     const courier = await s.get('courier', { type: 'json' });
     return json(200, publicView(o, courier));
+  }
+
+  // ---------- מצב מפתח ----------
+  if (a.startsWith('admin')) {
+    if (!adminOk(req)) { await new Promise(r => setTimeout(r, 900)); return json(401, { error: 'קוד מפתח שגוי' }); }
+    if (a === 'admin-login') return json(200, { ok: true });
+    if (a === 'admin-list') {
+      const idx = await readIdx(s);
+      const orders = (await Promise.all(idx.slice(0, 1000).map(id => s.get('o:' + id, { type: 'json' })))).filter(Boolean);
+      const courier = await s.get('courier', { type: 'json' });
+      const sys = {
+        cardcom: !!(process.env.CARDCOM_TERMINAL && process.env.CARDCOM_API_NAME),
+        terminal: process.env.CARDCOM_TERMINAL ? String(process.env.CARDCOM_TERMINAL).slice(-3) : null,
+        courierPin: !!process.env.COURIER_PIN, adminPin: true, site: process.env.URL || url.origin, now: Date.now()
+      };
+      return json(200, { orders, courier, sys });
+    }
+    if (a === 'admin-update' && req.method === 'POST') {
+      const id = str(body.id, 20);
+      if (!ID_RE.test(id)) return json(400, { error: 'לא תקין' });
+      const o = await s.get('o:' + id, { type: 'json' });
+      if (!o) return json(404, { error: 'לא נמצא' });
+      if (body.status && STATUSES.includes(body.status) && body.status !== o.status) { o.status = body.status; o.history.push({ s: body.status, at: Date.now(), by: 'admin' }); }
+      if (typeof body.paid === 'boolean') o.pay.paid = body.paid;
+      if (body.method && ['card', 'bit', 'cash', 'pending'].includes(body.method)) o.pay.method = body.method;
+      if (body.total !== undefined && body.total !== null && body.total !== '') {
+        const t = Math.round(Number(body.total) * 100) / 100;
+        if (!(t >= 0 && t <= MAX_AMOUNT)) return json(400, { error: 'מחיר לא תקין' });
+        o.price = { ...o.price, total: t, text: t + '₪', agreed: true };
+      }
+      if (typeof body.adminNote === 'string') o.adminNote = str(body.adminNote, 400);
+      await s.setJSON('o:' + id, o);
+      return json(200, { ok: true, order: o });
+    }
+    if (a === 'admin-delete' && req.method === 'POST') {
+      const id = str(body.id, 20);
+      if (!ID_RE.test(id)) return json(400, { error: 'לא תקין' });
+      await s.delete('o:' + id);
+      const idx = await readIdx(s); await s.setJSON('idx', idx.filter(x => x !== id));
+      return json(200, { ok: true });
+    }
+    return json(404, { error: 'פעולה לא מוכרת' });
   }
 
   // ---------- שליח: כל השאר דורש קוד ----------
