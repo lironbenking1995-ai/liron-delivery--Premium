@@ -68,6 +68,9 @@ const ID_RE = /^L[A-Z0-9]{6,14}$/;
 const CID_RE = /^(main|c[0-9a-f]{8}|e\d{1,2})$/;
 const phoneKey = p => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('972')) d = '0' + d.slice(3); return d; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const distM = (a, b) => { const R = 6371000, t = Math.PI / 180, dl = (b.lat - a.lat) * t, dn = (b.lng - a.lng) * t; const x = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * t) * Math.cos(b.lat * t) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+const TRAIL_MAX = 600;
+const slim = o => { const { trail, ...rest } = o; return { ...rest, trailN: (trail || []).length }; };
 
 function same(want, got) {
   want = String(want || ''); got = String(got || '');
@@ -270,8 +273,17 @@ export default async (req) => {
       return json(200, { ok: true });
     }
     if (role.mid && !/^env/.test(role.mid)) { const list = (await s.get('managers', { type: 'json' })) || []; const m = list.find(x => x.id === role.mid); if (m && (!m.lastLogin || Date.now() - m.lastLogin > 3e5)) { m.lastLogin = Date.now(); await s.setJSON('managers', list); } }
+    if (a === 'admin-order') {
+      const id = url.searchParams.get('id') || '';
+      if (!ID_RE.test(id)) return json(400, { error: 'לא תקין' });
+      const o = await s.get('o:' + id, { type: 'json' });
+      if (!o) return json(404, { error: 'לא נמצא' });
+      const c = o.assignedTo ? await findCourier(s, o.assignedTo) : null;
+      const loc = o.assignedTo ? await locOf(s, o.assignedTo) : null;
+      return json(200, { order: o, courier: c ? { ...pubCourier(c), loc } : null });
+    }
     if (a === 'admin-list') {
-      const orders = await readOrders(s, 1000);
+      const orders = (await readOrders(s, 1000)).map(slim);
       const list = await getCouriers(s);
       const all = [MAIN(), ...envCouriers().map(pubCourier), ...list.map(pubCourier)];
       const envIds = new Set(envCouriers().map(c => c.id));
@@ -386,7 +398,7 @@ export default async (req) => {
       }
       if (typeof body.adminNote === 'string') o.adminNote = str(body.adminNote, 400);
       await s.setJSON('o:' + id, o);
-      return json(200, { ok: true, order: o });
+      return json(200, { ok: true, order: slim(o) });
     }
     if (a === 'admin-delete' && req.method === 'POST') {
       const id = str(body.id, 20);
@@ -415,7 +427,7 @@ export default async (req) => {
     let orders = await readOrders(s, limit);
     // שליח רואה משלוחים חדשים שעוד לא נלקחו, ואת המשלוחים שלו
     if (!me.admin) orders = orders.filter(o => o.status === 'new' || o.assignedTo === me.id || (!o.assignedTo && me.id === 'main' && o.status !== 'new'));
-    return json(200, { orders, me: { id: me.id, name: me.name, phone: me.phone }, loc: await locOf(s, me.admin ? 'main' : me.id) });
+    return json(200, { orders: orders.map(slim), me: { id: me.id, name: me.name, phone: me.phone }, loc: await locOf(s, me.admin ? 'main' : me.id) });
   }
 
   const loadMine = async (id) => {
@@ -436,9 +448,12 @@ export default async (req) => {
         else if (!(st === 'cancelled' && me.id === 'main')) return json(409, { error: 'קודם לוחצים "לקחתי את המשלוח"' });
       } else if (owner !== me.id) return json(409, { error: 'המשלוח הזה כבר אצל ' + (o.courierName || 'שליח אחר') });
     }
-    o.status = st; o.history.push({ s: st, at: Date.now(), by: me.id });
+    const here = await locOf(s, me.admin ? (o.assignedTo || 'main') : me.id);
+    const hEntry = { s: st, at: Date.now(), by: me.id, byName: me.name };
+    if (here && Date.now() - here.at < 5 * 60 * 1000) { hEntry.lat = here.lat; hEntry.lng = here.lng; }
+    o.status = st; o.history.push(hEntry);
     await s.setJSON('o:' + o.id, o);
-    return json(200, { ok: true, order: o });
+    return json(200, { ok: true, order: slim(o) });
   }
 
   if (a === 'paid' && req.method === 'POST') {
@@ -446,7 +461,7 @@ export default async (req) => {
     if (!me.admin && o.assignedTo && o.assignedTo !== me.id) return json(409, { error: 'המשלוח הזה אצל שליח אחר' });
     o.pay.paid = !!body.paid; if (body.method && ['card', 'bit', 'cash'].includes(body.method)) o.pay.method = body.method;
     await s.setJSON('o:' + o.id, o);
-    return json(200, { ok: true, order: o });
+    return json(200, { ok: true, order: slim(o) });
   }
 
   if (a === 'loc' && req.method === 'POST') {
@@ -454,6 +469,16 @@ export default async (req) => {
     if (!(lat > 29 && lat < 34 && lng > 34 && lng < 36.5)) return json(400, { error: 'מיקום מחוץ לישראל' });
     const rec = { lat: +lat.toFixed(6), lng: +lng.toFixed(6), acc: Math.round(Number(body.acc) || 0), spd: Number(body.spd) || 0, at: Date.now(), name: me.name };
     await s.setJSON('loc:' + (me.admin ? 'main' : me.id), rec);
+    // מסלול: נשמרת נקודה לכל משלוח פעיל של השליח (בערך כל דקה או 150 מטר)
+    const ids = Array.isArray(body.active) ? body.active.filter(x => ID_RE.test(String(x))).slice(0, 15) : [];
+    await Promise.all(ids.map(async id => {
+      const o = await s.get('o:' + id, { type: 'json' });
+      if (!o || !LIVE.has(o.status) || (!me.admin && o.assignedTo !== me.id)) return;
+      const tr = o.trail || []; const last = tr[tr.length - 1];
+      if (last && rec.at - last.t < 55000 && distM(last, rec) < 150) return;
+      tr.push({ lat: rec.lat, lng: rec.lng, t: rec.at, s: o.status }); o.trail = tr.slice(-TRAIL_MAX);
+      await s.setJSON('o:' + id, o);
+    }));
     return json(200, { ok: true });
   }
 
