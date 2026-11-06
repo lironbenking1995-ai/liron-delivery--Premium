@@ -130,7 +130,12 @@ async function adminByCode(code, s) {
   if (same(process.env.ADMIN_PIN, code)) return { role: 'dev', name: 'מפתח' };
   for (const m of envManagers()) if (same(m.code, code)) return { role: 'manager', name: m.name, mid: m.id };
   const list = (await s.get('managers', { type: 'json' })) || [];
-  for (const m of list) if (m.active !== false && m.hash && (await sha(m.salt + ':' + code)) === m.hash) return { role: 'manager', name: m.name, mid: m.id };
+  for (const m of list) {
+    if (m.active === false || !m.salt) continue;
+    const h = await sha(m.salt + ':' + code);
+    if (m.hash && h === m.hash) return { role: 'manager', name: m.name, mid: m.id };
+    if (m.reset && m.reset.exp > Date.now() && h === m.reset.hash) { m.hash = m.reset.hash; delete m.reset; await s.setJSON('managers', list); console.warn('[security] manager reset code used', m.id); return { role: 'manager', name: m.name, mid: m.id }; }
+  }
   return null;
 }
 // השליח הראשי (לירון): נכנס עם COURIER_PIN בלבד
@@ -165,6 +170,28 @@ async function otpCheck(phone, code) {
   const j = await r.json().catch(() => ({}));
   return Number(j.status) === 0;
 }
+// ---------- שליחת הודעה לוואטסאפ של העסק (לאיפוס קודים) ----------
+// CallMeBot (חינם, הודעות למספר שלך): CALLMEBOT_KEY. או Twilio WhatsApp: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WA_FROM
+// המספר שמקבל: WHATSAPP_TO, ואם לא הוגדר אז COURIER_PHONE, ואם גם הוא לא אז הנייד של העסק
+const WA_TO = () => ilPhone(process.env.WHATSAPP_TO || process.env.COURIER_PHONE || '0525068475');
+const WA_PROVIDER = () => process.env.CALLMEBOT_KEY ? 'callmebot' : (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WA_FROM) ? 'twilio' : null;
+async function waSend(text) {
+  const to = WA_TO(); if (!to) return false;
+  if (WA_PROVIDER() === 'callmebot') {
+    const u = 'https://api.callmebot.com/whatsapp.php?phone=972' + to.slice(1) + '&text=' + encodeURIComponent(text) + '&apikey=' + encodeURIComponent(process.env.CALLMEBOT_KEY);
+    const r = await fetch(u); const t = await r.text().catch(() => '');
+    const ok = r.ok && !/error|invalid|not\s+(allowed|registered)|wrong/i.test(t);
+    if (!ok) console.error('callmebot', r.status, t.replace(/<[^>]+>/g, ' ').slice(0, 200));
+    return ok;
+  }
+  if (WA_PROVIDER() === 'twilio') {
+    const r = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + process.env.TWILIO_ACCOUNT_SID + '/Messages.json', { method: 'POST', headers: { authorization: 'Basic ' + btoa(process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN), 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ From: 'whatsapp:' + process.env.TWILIO_WA_FROM, To: 'whatsapp:+972' + to.slice(1), Body: text }) });
+    if (!r.ok) console.error('twilio wa', r.status, (await r.text()).slice(0, 200));
+    return r.ok;
+  }
+  return false;
+}
+const normName = n => String(n || '').replace(/\s+/g, ' ').trim().toLowerCase();
 async function makeCourierSession(s, cid, fp, otp) {
   const tok = rnd(20);
   const exp = otp ? Date.now() + OTP_SESSION_HOURS() * 3600e3 : Date.now() + SESSION_DAYS * 864e5;
@@ -186,8 +213,8 @@ async function findCourier(s, id) { if (id === 'main') return MAIN(); const e = 
 async function codeTaken(s, code, exceptId) {
   if (same(process.env.ADMIN_PIN, code) || same(process.env.COURIER_PIN, code)) return true;
   if (envManagers().some(m => same(m.code, code)) || envCouriers().some(c => same(c.code, code))) return true;
-  for (const m of ((await s.get('managers', { type: 'json' })) || [])) if (m.hash && (await sha(m.salt + ':' + code)) === m.hash) return true;
-  for (const c of await getCouriers(s)) if (c.id !== exceptId && c.hash && (await sha(c.salt + ':' + code)) === c.hash) return true;
+  for (const m of ((await s.get('managers', { type: 'json' })) || [])) { const h = m.salt ? await sha(m.salt + ':' + code) : ''; if ((m.hash && h === m.hash) || (m.reset && h === m.reset.hash)) return true; }
+  for (const c of await getCouriers(s)) { if (c.id === exceptId) continue; const h = c.salt ? await sha(c.salt + ':' + code) : ''; if ((c.hash && h === c.hash) || (c.reset && h === c.reset.hash)) return true; }
   return false;
 }
 async function genCode(s) {
@@ -315,12 +342,15 @@ export default async (req, context) => {
     if (code.length >= 4) {
       if (same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); fp = await courierFp(MAIN()); rawPhone = MAIN().phone; }
       if (!me) { const e = envCouriers().find(c => same(c.code, code)); if (e) { cid = e.id; me = pubCourier(e); fp = await courierFp(e); rawPhone = e.phone; } }
-      if (!me) for (const c of await getCouriers(s)) {
-        if (c.hash && (await sha(c.salt + ':' + code)) === c.hash) {
+      if (!me) { const list = await getCouriers(s); for (const c of list) {
+        if (!c.salt) continue;
+        const h = await sha(c.salt + ':' + code);
+        if (c.reset && c.reset.exp > Date.now() && h === c.reset.hash && c.active !== false) { c.hash = c.reset.hash; delete c.reset; await s.setJSON('couriers', list); console.warn('[security] courier reset code used', c.id); }
+        if (c.hash && h === c.hash) {
           if (c.active === false) { await sleep(700); return json(403, { error: 'החשבון שלך מושבת. פנה למנהל.' }); }
           cid = c.id; me = pubCourier(c); fp = await courierFp(c); rawPhone = c.phone; break;
         }
-      }
+      } }
     }
     if (!me) { await noteFail(s, ip, 'courier-login'); await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
     if (OTP_ON()) {
@@ -339,6 +369,41 @@ export default async (req, context) => {
     }
     const tok = await makeCourierSession(s, cid, fp, false);
     return json(200, { token: tok, courier: me });
+  }
+  if (a === 'reset-request' && req.method === 'POST') {
+    // "שכחתי קוד": קוד חדש נשלח לוואטסאפ של העסק. הקוד הישן ממשיך לעבוד עד שמשתמשים בחדש.
+    if (await isLocked(s, ip)) return tooMany();
+    if (!WA_PROVIDER()) return json(503, { error: 'איפוס דרך וואטסאפ עוד לא מחובר. פנו ללירון.' });
+    const role = body.role === 'manager' ? 'manager' : 'courier', name = normName(str(body.name, 40));
+    if (name.length < 2) return json(400, { error: 'הקלידו את השם שלכם כפי שרשום במערכת' });
+    const rk = await ipKey('rr:', ip); const rr = await rlGet(s, rk, 3600e3);
+    if (rr.n >= 4) { secLog('reset limit', ip, role); return json(429, { error: 'נשלחו כבר כמה בקשות איפוס. נסו שוב בעוד שעה או פנו ללירון.' }); }
+    rr.n++; await s.setJSON(rk, rr);
+    const done = json(200, { ok: true, msg: 'אם השם רשום במערכת, נשלח קוד חדש לוואטסאפ של העסק. לירון יעביר אותו אליכם.' });
+    const ak = 'ra:' + role + ':' + (await sha(name)).slice(0, 16); const ar = await rlGet(s, ak, 864e5);
+    if (ar.n >= 3) { secLog('reset limit per account', ip, role + ':' + name); return done; }
+    const when = new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' });
+    let text = null;
+    if (role === 'courier') {
+      if (normName(MAIN().name) === name) text = '🔐 לירון משלוחים · בקשת איפוס קוד\nשליח ראשי: ' + MAIN().name + '\nהקוד שלו מוגדר ב-Netlify (COURIER_PIN): ' + (process.env.COURIER_PIN || 'לא מוגדר');
+      const e = !text && envCouriers().find(c => normName(c.name) === name);
+      if (e) text = '🔐 לירון משלוחים · בקשת איפוס קוד\nשליח: ' + e.name + '\nהקוד שלו מוגדר ב-Netlify (COURIER_CODES): ' + e.code;
+      if (!text) { const list = await getCouriers(s); const c = list.find(x => x.active !== false && normName(x.name) === name);
+        if (c) { const nc = await genCode(s); if (!c.salt) c.salt = rnd(8); c.reset = { hash: await sha(c.salt + ':' + nc), exp: Date.now() + 864e5, at: Date.now() }; await s.setJSON('couriers', list);
+          text = '🔐 לירון משלוחים · איפוס קוד שליח\nשליח: ' + c.name + (c.phone ? ' · ' + c.phone : '') + '\nקוד חדש: ' + nc + '\nבתוקף 24 שעות. הקוד הישן עובד עד שהחדש נכנס לשימוש.'; } }
+    } else {
+      const e = envManagers().find(m => normName(m.name) === name);
+      if (e) text = '🔐 לירון משלוחים · בקשת איפוס קוד\nמנהל: ' + e.name + '\nהקוד שלו מוגדר ב-Netlify (MANAGER_CODES): ' + e.code;
+      if (!text) { const list = (await s.get('managers', { type: 'json' })) || []; const m = list.find(x => x.active !== false && normName(x.name) === name);
+        if (m) { const nc = await genCode(s); if (!m.salt) m.salt = rnd(8); m.reset = { hash: await sha(m.salt + ':' + nc), exp: Date.now() + 864e5, at: Date.now() }; await s.setJSON('managers', list);
+          text = '🔐 לירון משלוחים · איפוס קוד מנהל\nמנהל: ' + m.name + '\nקוד חדש: ' + nc + '\nבתוקף 24 שעות. הקוד הישן עובד עד שהחדש נכנס לשימוש.'; } }
+    }
+    if (!text) { secLog('reset for unknown name', ip, role + ':' + name); return done; }
+    ar.n++; await s.setJSON(ak, ar);
+    let sent = false; try { sent = await waSend(text + '\n' + when + '\nלא ביקשתם? אפשר להתעלם.'); } catch (e) { console.error('wa', e); }
+    secLog('reset ' + (sent ? 'sent' : 'FAILED'), ip, role + ':' + name);
+    if (!sent) return json(502, { error: 'לא הצלחנו לשלוח לוואטסאפ כרגע. נסו שוב בעוד כמה דקות.' });
+    return done;
   }
   if (a === 'login-otp' && req.method === 'POST') {
     if (await isLocked(s, ip)) return tooMany();
@@ -501,6 +566,7 @@ export default async (req, context) => {
       const list = await getCouriers(s);
       const all = [MAIN(), ...envCouriers(), ...list.filter(c => c.active !== false)];
       const sharing = (await Promise.all(all.map(c => locOf(s, c.id)))).filter(l => l && Date.now() - l.at < 10 * 60 * 1000).length;
+      checks.push({ key: 'wa', label: 'איפוס קודים לוואטסאפ', ...(WA_PROVIDER() ? { ok: true, detail: 'פעיל דרך ' + (WA_PROVIDER() === 'callmebot' ? 'CallMeBot' : 'Twilio') + ' · נשלח לנייד ' + maskPhone(WA_TO() || '0000000000') } : { ok: false, warn: true, detail: 'כבוי: עוד לא חובר שירות וואטסאפ, אז כפתור "שכחתי קוד" מבקש לפנות ללירון' }) });
       checks.push({ key: 'sms', label: 'אימות SMS לשליחים', ...(OTP_ON() ? { ok: true, detail: 'פעיל דרך ' + (OTP_PROVIDER() === 'twilio' ? 'Twilio' : '019 SMS') + ' · קוד חדש בכל כניסה, חיבור בתוקף ' + OTP_SESSION_HOURS() + ' שעות' } : { ok: false, warn: true, detail: 'כבוי: עוד לא חוברה חברת SMS, ושליחים נכנסים עם הקוד האישי בלבד' }) });
       checks.push({ key: 'couriers', label: 'שליחים', ok: true, info: true, detail: all.length + ' שליחים פעילים · ' + (sharing ? sharing + ' משתפים מיקום עכשיו' : 'אף שליח לא משתף מיקום כרגע (תקין כשאין משלוח בדרך)') });
       return json(200, { checks, at: Date.now() });
