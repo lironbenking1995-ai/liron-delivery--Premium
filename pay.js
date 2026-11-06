@@ -4,6 +4,8 @@
 //   CARDCOM_API_NAME  – שם ה-API
 // המחיר מחושב כאן מחדש לפי הערים, כך שאי אפשר לשנות אותו מהדפדפן.
 
+import { getStore } from '@netlify/blobs';
+
 const CITIES = {
   'אשקלון': 0, 'ברכיה': 5, 'בת הדר': 6, 'גיאה': 6, 'הודיה': 7, 'מבקיעים': 7, 'זיקים': 8, 'באר גנים': 8, 'ניצן': 8,
   'תלמי יפה': 9, 'ניצנים': 10, 'כרמיה': 10, 'משען': 10, 'ניר ישראל': 12, 'כוכב מיכאל': 12, 'שדה עוזיה': 15, 'אמונים': 16,
@@ -64,8 +66,19 @@ export default async (req) => {
   const apiName = process.env.CARDCOM_API_NAME;
   if (!terminal || !apiName) return json(500, { error: 'התשלום באשראי עוד לא הוגדר באתר.' });
 
+  // רק מהאתר עצמו (הגנת CSRF)
+  const url = new URL(req.url), origin = req.headers.get('origin');
+  if (origin) { let h = ''; try { h = new URL(origin).host; } catch {} if (h !== url.host && !/(^|\.)liron-delivery\.com$/.test(h)) return json(403, { error: 'בקשה ממקור לא מורשה' }); }
   let o;
   try { o = await req.json(); } catch { return json(400, { error: 'בקשה לא תקינה' }); }
+  if (!o || typeof o !== 'object') return json(400, { error: 'בקשה לא תקינה' });
+  // אם יש הזמנה שמורה, מחייבים לפי המחיר שנשמר בה בשרת ולא לפי מה שהדפדפן שולח.
+  let saved = null;
+  if (/^L[A-Z0-9]{6,14}$/.test(String(o.orderId || ''))) {
+    try { saved = await getStore({ name: 'liron-orders', consistency: 'strong' }).get('o:' + o.orderId, { type: 'json' }); } catch (e) { console.error('order load', e); }
+    if (saved && saved.pay && saved.pay.paid) return json(409, { error: 'ההזמנה הזאת כבר שולמה.' });
+    if (saved) o = { ...o, fromCity: saved.from.city, toCity: saved.to.city, qty: saved.pkg.qty, size: saved.pkg.size, kind: saved.pkg.kind, extra: saved.extra };
+  }
   // מחיר קבוע מחושב בשרת. אם המחיר בתיאום, הלקוח מזין את הסכום שסוכם (עד 10,000 ₪).
   let p = price(o), agreed = false;
   if (p && p.needExtra) return json(400, { error: 'בחרו תוספת לאזור רמלה-לוד (בכפולות של 10 ₪).' });
@@ -78,7 +91,8 @@ export default async (req) => {
   if (p.total > MAX_AMOUNT) return json(400, { error: 'הסכום המקסימלי לתשלום באתר הוא 10,000 ₪.' });
 
   const site = process.env.URL || new URL(req.url).origin;
-  const ref = /^L[A-Z0-9]{6,14}$/.test(String(o.orderId || '')) ? String(o.orderId) : 'L' + Date.now().toString(36).toUpperCase();
+  const ref = saved ? saved.id : 'P' + Date.now().toString(36).toUpperCase();
+  console.log('pay link', ref, p.total, agreed ? 'agreed-by-customer' : 'fixed');
   const desc = `${agreed ? 'סכום מתואם · ' : ''}${p.extra ? 'כולל תוספת ' + p.extra + '₪ · ' : ''}משלוח ${o.size || ''} · ${norm(o.fromCity)} ← ${norm(o.toCity)}`.slice(0, 200);
 
   const body = {

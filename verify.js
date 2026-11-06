@@ -10,7 +10,17 @@ async function markPaid(ref, t) {
     const s = getStore({ name: 'liron-orders', consistency: 'strong' });
     const o = await s.get('o:' + ref, { type: 'json' });
     if (!o || o.pay.paid) return;
-    o.pay = { method: 'card', paid: true, deal: t.TranzactionId ?? null, amount: t.Amount ?? null };
+    const amount = Number(t.Amount);
+    const due = o.price && o.price.total != null && !o.price.byCustomer ? Number(o.price.total) : null;
+    // בודקים שהסכום ששולם תואם למחיר ההזמנה
+    if (due != null && !(amount >= due - 0.01)) {
+      o.pay = { method: 'card', paid: false, deal: t.TranzactionId ?? null, amount, underpaid: true };
+      console.warn('[security] underpaid order', ref, 'paid', amount, 'due', due);
+    } else {
+      o.pay = { method: 'card', paid: true, deal: t.TranzactionId ?? null, amount };
+      if (due == null) o.price = { ...(o.price || {}), total: amount, text: amount + '₪ שולם באשראי (סכום שהלקוח הזין, לבדוק מול מה שסוכם)', byCustomer: true };
+    }
+    o.history = o.history || []; o.history.push({ s: o.status, at: Date.now(), by: 'cardcom', byName: (o.pay.paid ? 'תשלום אשראי ' : 'תשלום חלקי ') + amount + '₪' });
     await s.setJSON('o:' + ref, o);
   } catch (e) { console.error('markPaid', e); }
 }

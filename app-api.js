@@ -78,6 +78,27 @@ function same(want, got) {
   let d = 0; for (let i = 0; i < want.length; i++) d |= want.charCodeAt(i) ^ got.charCodeAt(i);
   return d === 0;
 }
+// ---------- אבטחה: הגבלת ניסיונות, בדיקת מקור, רישום ----------
+const ipOf = (req, ctx) => String(ctx?.ip || req.headers.get('x-nf-client-connection-ip') || (req.headers.get('x-forwarded-for') || '').split(',')[0] || 'unknown').trim().slice(0, 64);
+const FAIL_WIN = 15 * 60 * 1000, FAIL_MAX = 20;        // 20 קודים שגויים ב-15 דקות → חסימה ל-15 דקות
+const CREATE_WIN = 60 * 60 * 1000, CREATE_MAX = 20;    // עד 20 הזמנות בשעה מאותה כתובת
+const ADMIN_SESSION_DAYS = 7;
+const secLog = (ev, ip, extra) => console.warn('[security]', ev, 'ip=' + ip, extra || '');
+async function rlGet(s, key, win) { const r = await s.get(key, { type: 'json' }); return r && Date.now() - r.t < win ? r : { n: 0, t: Date.now() }; }
+async function ipKey(prefix, ip) { return prefix + (await sha('ip:' + ip)).slice(0, 24); }
+async function isLocked(s, ip) { const r = await s.get(await ipKey('rl:', ip), { type: 'json' }); return !!(r && r.until && r.until > Date.now()); }
+async function noteFail(s, ip, what) {
+  const k = await ipKey('rl:', ip); const r = await rlGet(s, k, FAIL_WIN); r.n++;
+  if (r.n >= FAIL_MAX) { r.until = Date.now() + FAIL_WIN; secLog('LOCKED after ' + r.n + ' wrong codes', ip, what); }
+  else if (r.n >= 5) secLog('wrong code #' + r.n, ip, what);
+  await s.setJSON(k, r);
+}
+const tooMany = () => json(429, { error: 'יותר מדי ניסיונות. נסו שוב בעוד 15 דקות.' });
+// בקשות POST מתקבלות רק מהאתר עצמו (הגנת CSRF) ורק כ-JSON
+function originOk(req, url) {
+  const o = req.headers.get('origin'); if (!o) return true;
+  try { const h = new URL(o).host; return h === url.host || /(^|\.)liron-delivery\.com$/.test(h); } catch { return false; }
+}
 async function sha(text) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
 
 // כניסת ניהול: קוד מפתח (ADMIN_PIN) או קוד מנהל.
@@ -87,8 +108,24 @@ function envManagers() {
     const k = x.lastIndexOf(':'); return k > 0 ? { id: 'env' + i, name: x.slice(0, k).trim(), code: x.slice(k + 1).trim(), env: true } : null;
   }).filter(m => m && m.code.length >= 4);
 }
+// טביעת אצבע של הקוד: כשמחליפים קוד, כל החיבורים הישנים שלו מתנתקים
+async function credFp(r, s) {
+  if (r.role === 'dev') return process.env.ADMIN_PIN ? (await sha('fp:' + process.env.ADMIN_PIN)).slice(0, 20) : null;
+  if (/^env/.test(r.mid || '')) { const m = envManagers().find(x => x.id === r.mid); return m ? (await sha('fp:' + m.code)).slice(0, 20) : null; }
+  const m = ((await s.get('managers', { type: 'json' })) || []).find(x => x.id === r.mid);
+  return m && m.active !== false && m.hash ? m.hash.slice(0, 20) : null;
+}
 async function adminRole(req, s) {
-  const code = String(req.headers.get('x-admin-pin') || '');
+  const tok = String(req.headers.get('x-admin-token') || '');
+  if (/^[0-9a-f]{48}$/.test(tok)) {
+    const ses = await s.get('as:' + tok, { type: 'json' });
+    if (ses && ses.exp > Date.now() && ses.fp && ses.fp === await credFp(ses, s)) return { role: ses.role, name: ses.name, mid: ses.mid, tok };
+    return null;
+  }
+  return null;
+}
+async function adminByCode(code, s) {
+  code = String(code || '');
   if (!code) return null;
   if (same(process.env.ADMIN_PIN, code)) return { role: 'dev', name: 'מפתח' };
   for (const m of envManagers()) if (same(m.code, code)) return { role: 'manager', name: m.name, mid: m.id };
@@ -123,6 +160,11 @@ async function genCode(s) {
 }
 const pubCourier = c => ({ id: c.id, name: c.name, phone: c.phone || process.env.COURIER_PHONE || '0525068475', active: c.active !== false });
 
+async function courierFp(c) {
+  if (c.id === 'main') return process.env.COURIER_PIN ? (await sha('fp:' + process.env.COURIER_PIN)).slice(0, 20) : null;
+  if (c.env) return (await sha('fp:' + c.code)).slice(0, 20);
+  return c.hash ? c.hash.slice(0, 20) : null;
+}
 // מזהה מי מבצע את הבקשה: מפתח, שליח עם סשן, או השליח הראשי עם קוד
 async function who(req, s) {
   const ar = await adminRole(req, s);
@@ -132,10 +174,9 @@ async function who(req, s) {
     const ses = await s.get('sess:' + tok, { type: 'json' });
     if (ses && ses.exp > Date.now()) {
       const c = await findCourier(s, ses.cid);
-      if (c && c.active !== false) return pubCourier(c);
+      if (c && c.active !== false && (ses.fp || null) === await courierFp(c)) return pubCourier(c);
     }
   }
-  if (same(process.env.COURIER_PIN, req.headers.get('x-courier-pin'))) return MAIN();
   return null;
 }
 
@@ -170,15 +211,26 @@ function publicView(o, loc) {
   };
 }
 
-export default async (req) => {
+export default async (req, context) => {
   const url = new URL(req.url);
   const a = url.searchParams.get('a') || '';
   const s = store();
+  const ip = ipOf(req, context);
+  if (!['GET', 'POST'].includes(req.method)) return json(405, { error: 'שיטה לא נתמכת' });
   let body = {};
-  if (req.method === 'POST') { try { body = await req.json(); } catch { return json(400, { error: 'בקשה לא תקינה' }); } }
+  if (req.method === 'POST') {
+    if (!originOk(req, url)) { secLog('blocked cross-site POST', ip, req.headers.get('origin')); return json(403, { error: 'בקשה ממקור לא מורשה' }); }
+    if (!/^application\/json/i.test(req.headers.get('content-type') || '')) return json(415, { error: 'בקשה לא תקינה' });
+    if (Number(req.headers.get('content-length') || 0) > 20000) return json(413, { error: 'בקשה גדולה מדי' });
+    try { body = await req.json(); } catch { return json(400, { error: 'בקשה לא תקינה' }); }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'בקשה לא תקינה' });
+  }
 
   // ---------- לקוח: יצירת הזמנה ----------
   if (a === 'create' && req.method === 'POST') {
+    const ck = await ipKey('rc:', ip); const cr = await rlGet(s, ck, CREATE_WIN);
+    if (cr.n >= CREATE_MAX) { secLog('too many orders', ip, cr.n); return json(429, { error: 'נשלחו הרבה הזמנות מהמכשיר הזה. התקשרו אלינו או נסו שוב בעוד שעה.' }); }
+    cr.n++; await s.setJSON(ck, cr);
     const o = body;
     const fromCity = str(o.fromCity, 40), toCity = str(o.toCity, 40);
     const name = str(o.name, 60), phone = str(o.phone, 20).replace(/[^\d+\-\s]/g, '');
@@ -187,7 +239,7 @@ export default async (req) => {
     const agreed = Math.round(Number(o.agreed) * 100) / 100;
     let priceRec;
     if (p && !p.needExtra) priceRec = { total: p.total, extra: p.extra || 0, agreed: false, text: p.total + '₪' };
-    else if (agreed >= 1 && agreed <= MAX_AMOUNT) priceRec = { total: agreed, extra: 0, agreed: true, text: agreed + '₪ (מתואם)' };
+    else if (agreed >= 1 && agreed <= MAX_AMOUNT) priceRec = { total: agreed, extra: 0, agreed: true, byCustomer: true, text: agreed + '₪ (הלקוח הזין, לבדוק מול מה שסוכם)' };
     else priceRec = { total: null, extra: 0, agreed: false, text: 'בתיאום' };
     const extra = isRL(fromCity) || isRL(toCity) ? Number(o.extra) || 0 : 0;
     const [gf, gt] = await Promise.all([geocode(str(o.fromStreet, 80), canon(fromCity) || fromCity), geocode(str(o.toStreet, 80), canon(toCity) || toCity)]);
@@ -214,28 +266,29 @@ export default async (req) => {
     const id = url.searchParams.get('id') || '', token = url.searchParams.get('t') || '';
     if (!ID_RE.test(id)) return json(404, { error: 'לא נמצא' });
     const o = await s.get('o:' + id, { type: 'json' });
-    if (!o || o.token !== token) return json(404, { error: 'לא מצאנו משלוח עם הקוד הזה' });
+    if (!o || !same(o.token, token)) return json(404, { error: 'לא מצאנו משלוח עם הקוד הזה' });
     return json(200, publicView(o, await locOf(s, o.assignedTo)));
   }
 
   // ---------- שליח: התחברות ----------
   if (a === 'login' && req.method === 'POST') {
     // כניסה עם הקוד האישי בלבד (הטלפון לא חובה)
+    if (await isLocked(s, ip)) return tooMany();
     const code = str(body.code, 40);
-    let cid = null, me = null;
+    let cid = null, me = null, fp = null;
     if (code.length >= 4) {
-      if (same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); }
-      if (!me) { const e = envCouriers().find(c => same(c.code, code)); if (e) { cid = e.id; me = pubCourier(e); } }
+      if (same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); fp = await courierFp(MAIN()); }
+      if (!me) { const e = envCouriers().find(c => same(c.code, code)); if (e) { cid = e.id; me = pubCourier(e); fp = await courierFp(e); } }
       if (!me) for (const c of await getCouriers(s)) {
         if (c.hash && (await sha(c.salt + ':' + code)) === c.hash) {
           if (c.active === false) { await sleep(700); return json(403, { error: 'החשבון שלך מושבת. פנה למנהל.' }); }
-          cid = c.id; me = pubCourier(c); break;
+          cid = c.id; me = pubCourier(c); fp = await courierFp(c); break;
         }
       }
     }
-    if (!me) { await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
+    if (!me) { await noteFail(s, ip, 'courier-login'); await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
     const tok = rnd(20);
-    await s.setJSON('sess:' + tok, { cid, exp: Date.now() + SESSION_DAYS * 864e5 });
+    await s.setJSON('sess:' + tok, { cid, fp, exp: Date.now() + SESSION_DAYS * 864e5 });
     if (cid.startsWith('c')) {
       const list = await getCouriers(s); const c = list.find(x => x.id === cid); if (c) { c.lastLogin = Date.now(); await s.setJSON('couriers', list); }
     }
@@ -243,10 +296,22 @@ export default async (req) => {
   }
 
   // ---------- מצב מפתח ----------
+  if (a === 'admin-login' && req.method === 'POST') {
+    if (await isLocked(s, ip)) return tooMany();
+    const r = await adminByCode(req.headers.get('x-admin-pin') || body.code, s);
+    if (!r) { await noteFail(s, ip, 'admin-login'); await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
+    const tok = rnd(24);
+    await s.setJSON('as:' + tok, { role: r.role, name: r.name, mid: r.mid || null, fp: await credFp(r, s), exp: Date.now() + ADMIN_SESSION_DAYS * 864e5 });
+    secLog('admin login ok', ip, r.role + ':' + r.name);
+    return json(200, { ok: true, role: r.role, name: r.name, token: tok });
+  }
+  if (a === 'admin-logout' && req.method === 'POST') {
+    const tok = String(req.headers.get('x-admin-token') || ''); if (/^[0-9a-f]{48}$/.test(tok)) await s.delete('as:' + tok);
+    return json(200, { ok: true });
+  }
   if (a.startsWith('admin')) {
     const role = await adminRole(req, s);
-    if (!role) { await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
-    if (a === 'admin-login') return json(200, { ok: true, role: role.role, name: role.name });
+    if (!role) { await sleep(400); return json(401, { error: 'צריך להתחבר מחדש' }); }
     // ניהול קודי מנהל: רק למפתח
     if (a.startsWith('admin-manager') && role.role !== 'dev') return json(403, { error: 'רק המפתח יכול לנהל קודי מנהל' });
     if (a === 'admin-managers') {
@@ -458,7 +523,7 @@ export default async (req) => {
 
   if (a === 'paid' && req.method === 'POST') {
     const [o, err] = await loadMine(str(body.id, 20)); if (err) return err;
-    if (!me.admin && o.assignedTo && o.assignedTo !== me.id) return json(409, { error: 'המשלוח הזה אצל שליח אחר' });
+    if (!me.admin && (o.assignedTo || (o.status !== 'new' ? 'main' : null)) !== me.id) return json(409, { error: 'אפשר לסמן תשלום רק במשלוח שלך' });
     o.pay.paid = !!body.paid; if (body.method && ['card', 'bit', 'cash'].includes(body.method)) o.pay.method = body.method;
     await s.setJSON('o:' + o.id, o);
     return json(200, { ok: true, order: slim(o) });
