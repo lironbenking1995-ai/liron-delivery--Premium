@@ -136,6 +136,42 @@ async function adminByCode(code, s) {
 // השליח הראשי (לירון): נכנס עם COURIER_PIN בלבד
 const MAIN = () => ({ id: 'main', name: process.env.COURIER_NAME || 'לירון', phone: process.env.COURIER_PHONE || '0525068475', active: true });
 
+// ---------- אימות SMS לשליחים ----------
+// Twilio Verify: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID
+// 019 SMS: SMS019_USER, SMS019_TOKEN (אופציונלי: SMS019_SOURCE, SMS019_APP_ID)
+const OTP_PROVIDER = () => (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SID) ? 'twilio' : (process.env.SMS019_USER && process.env.SMS019_TOKEN) ? '019' : null;
+const OTP_ON = () => !!OTP_PROVIDER() && process.env.COURIER_OTP !== 'off';
+const OTP_SESSION_HOURS = () => Math.min(72, Math.max(1, Number(process.env.COURIER_OTP_HOURS) || 12));
+const ilPhone = p => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('972')) d = '0' + d.slice(3); return /^05\d{8}$/.test(d) ? d : null; };
+const maskPhone = d => d.slice(0, 3) + '-XXX-X' + d.slice(-3);
+async function otpSend(phone) {
+  if (OTP_PROVIDER() === 'twilio') {
+    const r = await fetch('https://verify.twilio.com/v2/Services/' + process.env.TWILIO_VERIFY_SID + '/Verifications', { method: 'POST', headers: { authorization: 'Basic ' + btoa(process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN), 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ To: '+972' + phone.slice(1), Channel: 'sms', Locale: 'he' }) });
+    if (!r.ok) console.error('twilio send', r.status, (await r.text()).slice(0, 300));
+    return r.ok;
+  }
+  const r = await fetch('https://019sms.co.il/api', { method: 'POST', headers: { authorization: 'Bearer ' + process.env.SMS019_TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ send_otp: { user: { username: process.env.SMS019_USER }, phone, app_id: String(process.env.SMS019_APP_ID || '1'), source: process.env.SMS019_SOURCE || 'LironDeliv', max_tries: '5', valid_time: '5', text: 'קוד הכניסה שלך ללירון משלוחים: [code]' } }) });
+  const j = await r.json().catch(() => ({}));
+  if (Number(j.status) !== 0) console.error('019 send', r.status, j.status, String(j.message || '').slice(0, 200));
+  return Number(j.status) === 0;
+}
+async function otpCheck(phone, code) {
+  if (OTP_PROVIDER() === 'twilio') {
+    const r = await fetch('https://verify.twilio.com/v2/Services/' + process.env.TWILIO_VERIFY_SID + '/VerificationCheck', { method: 'POST', headers: { authorization: 'Basic ' + btoa(process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN), 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ To: '+972' + phone.slice(1), Code: code }) });
+    const j = await r.json().catch(() => ({}));
+    return r.ok && j.status === 'approved';
+  }
+  const r = await fetch('https://019sms.co.il/api', { method: 'POST', headers: { authorization: 'Bearer ' + process.env.SMS019_TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ validate_otp: { user: { username: process.env.SMS019_USER }, phone, app_id: String(process.env.SMS019_APP_ID || '1'), code, destination_type: '1' } }) });
+  const j = await r.json().catch(() => ({}));
+  return Number(j.status) === 0;
+}
+async function makeCourierSession(s, cid, fp, otp) {
+  const tok = rnd(20);
+  const exp = otp ? Date.now() + OTP_SESSION_HOURS() * 3600e3 : Date.now() + SESSION_DAYS * 864e5;
+  await s.setJSON('sess:' + tok, { cid, fp, otp: !!otp, exp });
+  if (cid.startsWith('c')) { const list = await getCouriers(s); const c = list.find(x => x.id === cid); if (c) { c.lastLogin = Date.now(); await s.setJSON('couriers', list); } }
+  return tok;
+}
 async function getCouriers(s) { return (await s.get('couriers', { type: 'json' })) || []; }
 // שליחים קבועים מ-Netlify: COURIER_CODES בפורמט "שם:קוד" או "שם:טלפון:קוד", מופרדים בפסיק
 function envCouriers() {
@@ -174,7 +210,7 @@ async function who(req, s) {
     const ses = await s.get('sess:' + tok, { type: 'json' });
     if (ses && ses.exp > Date.now()) {
       const c = await findCourier(s, ses.cid);
-      if (c && c.active !== false && (ses.fp || null) === await courierFp(c)) return pubCourier(c);
+      if (c && c.active !== false && (ses.fp || null) === await courierFp(c) && (ses.otp || !OTP_ON())) return pubCourier(c);
     }
   }
   return null;
@@ -275,24 +311,53 @@ export default async (req, context) => {
     // כניסה עם הקוד האישי בלבד (הטלפון לא חובה)
     if (await isLocked(s, ip)) return tooMany();
     const code = str(body.code, 40);
-    let cid = null, me = null, fp = null;
+    let cid = null, me = null, fp = null, rawPhone = '';
     if (code.length >= 4) {
-      if (same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); fp = await courierFp(MAIN()); }
-      if (!me) { const e = envCouriers().find(c => same(c.code, code)); if (e) { cid = e.id; me = pubCourier(e); fp = await courierFp(e); } }
+      if (same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); fp = await courierFp(MAIN()); rawPhone = MAIN().phone; }
+      if (!me) { const e = envCouriers().find(c => same(c.code, code)); if (e) { cid = e.id; me = pubCourier(e); fp = await courierFp(e); rawPhone = e.phone; } }
       if (!me) for (const c of await getCouriers(s)) {
         if (c.hash && (await sha(c.salt + ':' + code)) === c.hash) {
           if (c.active === false) { await sleep(700); return json(403, { error: 'החשבון שלך מושבת. פנה למנהל.' }); }
-          cid = c.id; me = pubCourier(c); fp = await courierFp(c); break;
+          cid = c.id; me = pubCourier(c); fp = await courierFp(c); rawPhone = c.phone; break;
         }
       }
     }
     if (!me) { await noteFail(s, ip, 'courier-login'); await sleep(900); return json(401, { error: 'הקוד שגוי' }); }
-    const tok = rnd(20);
-    await s.setJSON('sess:' + tok, { cid, fp, exp: Date.now() + SESSION_DAYS * 864e5 });
-    if (cid.startsWith('c')) {
-      const list = await getCouriers(s); const c = list.find(x => x.id === cid); if (c) { c.lastLogin = Date.now(); await s.setJSON('couriers', list); }
+    if (OTP_ON()) {
+      // שלב 2: קוד חד-פעמי ב-SMS לנייד של השליח (אם לא רשום לו נייד, הקוד נשלח לנייד של העסק)
+      const phone = ilPhone(rawPhone) || ilPhone(process.env.COURIER_PHONE || '0525068475');
+      if (!phone) return json(400, { error: 'לא מוגדר מספר נייד. פנו למנהל.' });
+      const sk = 'os:' + cid; const sr = await rlGet(s, sk, 3600e3);
+      if (sr.n >= 6) { secLog('otp send limit', ip, cid); return json(429, { error: 'נשלחו יותר מדי קודים בשעה האחרונה. נסו שוב מאוחר יותר.' }); }
+      let sent = false; try { sent = await otpSend(phone); } catch (e) { console.error('otp send', e); }
+      if (!sent) return json(502, { error: 'לא הצלחנו לשלוח SMS כרגע. נסו שוב בעוד דקה.' });
+      sr.n++; await s.setJSON(sk, sr);
+      const pend = rnd(20);
+      await s.setJSON('otp:' + pend, { cid, fp, phone, exp: Date.now() + 10 * 60e3, tries: 0 });
+      secLog('otp sent', ip, cid + ' ' + maskPhone(phone));
+      return json(200, { otp: true, pending: pend, phone: maskPhone(phone), own: !!ilPhone(rawPhone) && ilPhone(rawPhone) !== ilPhone(process.env.COURIER_PHONE || '0525068475') || cid === 'main' });
     }
+    const tok = await makeCourierSession(s, cid, fp, false);
     return json(200, { token: tok, courier: me });
+  }
+  if (a === 'login-otp' && req.method === 'POST') {
+    if (await isLocked(s, ip)) return tooMany();
+    const pend = str(body.pending, 60), code = String(body.otp || '').replace(/\D/g, '').slice(0, 8);
+    const p = /^[0-9a-f]{40}$/.test(pend) ? await s.get('otp:' + pend, { type: 'json' }) : null;
+    if (!p || p.exp < Date.now()) return json(410, { error: 'פג התוקף של הקוד. הקישו שוב את הקוד האישי.' });
+    let ok = false; if (code.length >= 4) { try { ok = await otpCheck(p.phone, code); } catch (e) { console.error('otp check', e); } }
+    if (!ok) {
+      await noteFail(s, ip, 'otp'); p.tries = (p.tries || 0) + 1;
+      if (p.tries >= 5) { await s.delete('otp:' + pend); return json(410, { error: 'יותר מדי ניסיונות. הקישו שוב את הקוד האישי לקבלת SMS חדש.' }); }
+      await s.setJSON('otp:' + pend, p); await sleep(600);
+      return json(401, { error: 'קוד ה-SMS שגוי' });
+    }
+    await s.delete('otp:' + pend);
+    const c = await findCourier(s, p.cid);
+    if (!c || c.active === false || (p.fp || null) !== await courierFp(c)) return json(401, { error: 'הקוד האישי השתנה. התחברו מחדש.' });
+    const tok = await makeCourierSession(s, p.cid, p.fp, true);
+    secLog('otp login ok', ip, p.cid);
+    return json(200, { token: tok, courier: pubCourier(c) });
   }
 
   // ---------- מצב מפתח ----------
@@ -436,6 +501,7 @@ export default async (req, context) => {
       const list = await getCouriers(s);
       const all = [MAIN(), ...envCouriers(), ...list.filter(c => c.active !== false)];
       const sharing = (await Promise.all(all.map(c => locOf(s, c.id)))).filter(l => l && Date.now() - l.at < 10 * 60 * 1000).length;
+      checks.push({ key: 'sms', label: 'אימות SMS לשליחים', ...(OTP_ON() ? { ok: true, detail: 'פעיל דרך ' + (OTP_PROVIDER() === 'twilio' ? 'Twilio' : '019 SMS') + ' · קוד חדש בכל כניסה, חיבור בתוקף ' + OTP_SESSION_HOURS() + ' שעות' } : { ok: false, warn: true, detail: 'כבוי: עוד לא חוברה חברת SMS, ושליחים נכנסים עם הקוד האישי בלבד' }) });
       checks.push({ key: 'couriers', label: 'שליחים', ok: true, info: true, detail: all.length + ' שליחים פעילים · ' + (sharing ? sharing + ' משתפים מיקום עכשיו' : 'אף שליח לא משתף מיקום כרגע (תקין כשאין משלוח בדרך)') });
       return json(200, { checks, at: Date.now() });
     }
