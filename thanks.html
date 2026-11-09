@@ -19,6 +19,7 @@ var q=new URLSearchParams(location.search),id=q.get('lowprofilecode')||q.get('Lo
 var WA='972525068475',box=document.getElementById('box');
 function done(ok,info){
   box.className='box '+(ok?'ok':'bad');
+  if(ok){var ic=box.querySelector('.ic');ic.style.cssText='width:min(320px,100%);height:auto;border-radius:16px;background:none;margin:0 auto 14px;overflow:hidden';ic.innerHTML='<img src="/delivery-sent.gif?v=1" alt="המשלוח נשלח" width="400" height="293" style="width:100%;height:auto;display:block">';}else
   box.querySelector('.ic').innerHTML=ok?'<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>':'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"></path></svg>';
   document.getElementById('t').textContent=ok?'התשלום התקבל!':'התשלום לא הושלם';
   document.getElementById('m').textContent=ok?'תודה! שלחו לנו את פרטי ההזמנה בוואטסאפ (אם עוד לא שלחתם), ונתאם איתכם איסוף.':'לא חויבתם. אפשר לנסות שוב או לשלם ב-bit.';
