@@ -267,11 +267,11 @@ function calc(){
   if(!n||!fc||!tc||!S.kind){if(n&&val('fromCity').length>1&&val('toCity').length>1&&(!fc||!tc))r.state='coord',r.why='יישוב מחוץ למחירון';return r}
   if(S.kind!=='מהיום למחר'){r.state='coord';r.why=S.kind+': המחיר נקבע בתיאום';return r}
   if(S.pk.l>0){r.state='coord';r.why='חבילה גדולה: המחיר נקבע בתיאום';return r}
-  var far=Math.max(P.CITIES[fc],P.CITIES[tc]),rl=RL[fc]||RL[tc],unit=rl?P.RL_BASE:(P.TIERS.filter(function(t){return far<=t[0]})[0]||[])[1];
+  var far=Math.max(P.CITIES[fc],P.CITIES[tc]),rl=RL[fc]||RL[tc],local=fc==='אשקלון'&&tc==='אשקלון',unit=local?25:rl?P.RL_BASE:(P.TIERS.filter(function(t){return far<=t[0]})[0]||[])[1];
   if(!unit){r.state='coord';r.why='מרחק מחוץ למחירון';return r}
   var extra=rl?extraFor(S.pk.s,S.pk.m):0;
   r.state='ok';r.unit=unit;r.qty=n;r.extra=extra;r.total=unit*n+extra;
-  r.lines.push([n+' '+(n===1?'חבילה':'חבילות')+' × '+unit+'₪',unit*n+'₪']);if(extra)r.lines.push(['תוספת אזור רמלה-לוד (לפי החבילות)',extra+'₪']);
+  r.lines.push([n+' '+(n===1?'חבילה':'חבילות')+' × '+unit+'₪'+(local?' (בתוך אשקלון)':''),unit*n+'₪']);if(extra)r.lines.push(['תוספת אזור רמלה-לוד (לפי החבילות)',extra+'₪']);
   return r;
 }
 var PR={};

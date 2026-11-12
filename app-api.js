@@ -23,6 +23,7 @@ const EXTRA_STEP = 10, EXTRA_MAX = 100;
 const ALIAS = { 'קרית עקרון': 'קריית עקרון', 'ראשל"צ': 'ראשון לציון', 'ראשלצ': 'ראשון לציון', 'נס-ציונה': 'נס ציונה', 'יד רמבם': 'יד רמב"ם', 'קרית מלאכי': 'קריית מלאכי', 'בני עיש': 'בני עי"ש', 'אשקלון העיר': 'אשקלון' };
 const TIERS = [[20, 50], [30, 65], [40, 80], [50, 95]];
 const RL_BASE = 110; // מחיר בסיס לאזור רמלה-לוד, לפני התוספת
+const LOCAL_CITY = 'אשקלון', LOCAL_UNIT = 25; // משלוח בתוך אשקלון (איסוף ומסירה בעיר): 25 ₪ לכל חבילה
 const MAX_AMOUNT = 10000;      // סכום מקסימלי לחיוב באתר (₪)
 const MAX_PAYMENTS = 24;       // מספר תשלומים מקסימלי
 
@@ -44,7 +45,8 @@ function price(o) {
   if (o.kind !== 'מהיום למחר' || o.size === 'גדולה') return null;
   const far = Math.max(a, b);
   const rl = isRL(o.fromCity) || isRL(o.toCity);
-  const unit = rl ? RL_BASE : (TIERS.find(t => far <= t[0]) || [])[1];
+  const local = canon(o.fromCity) === LOCAL_CITY && canon(o.toCity) === LOCAL_CITY;
+  const unit = local ? LOCAL_UNIT : rl ? RL_BASE : (TIERS.find(t => far <= t[0]) || [])[1];
   if (!unit) return null;
   const qty = Math.min(100, Math.max(1, parseInt(o.qty, 10) || 1));
   let extra = 0;
