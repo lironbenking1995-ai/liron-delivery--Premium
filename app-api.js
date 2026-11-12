@@ -56,6 +56,14 @@ function price(o) {
 }
 
 const EXTRA_TXT = {10:'מעטפה או מסמכים',20:'חבילה קטנה אחת',30:'2–3 חבילות קטנות, או בינונית אחת',40:'בינונית + קטנה, או 4–5 קטנות',50:'2 חבילות בינוניות',60:'חבילה גדולה אחת',70:'גדולה + קטנה או בינונית',80:'2 גדולות, או 3–4 בינוניות',90:'כמה חבילות גדולות',100:'משלוח מלא'};
+// תוספת רמלה-לוד מחושבת לפי החבילות (לפי הטבלה שבאתר)
+function extraFor(sm, md) {
+  let e;
+  if (md === 0) e = sm <= 1 ? 20 : sm <= 3 ? 30 : sm <= 5 ? 40 : 40 + 10 * Math.ceil((sm - 5) / 2);
+  else if (md === 1) e = sm === 0 ? 30 : sm === 1 ? 40 : 40 + 10 * Math.ceil((sm - 1) / 2);
+  else e = 50 + 10 * (md - 2) + 10 * Math.ceil(sm / 2);
+  return Math.min(100, e);
+}
 const STATUSES = ['new', 'assigned', 'picked', 'transit', 'delivered', 'cancelled'];
 const LIVE = new Set(['assigned', 'picked', 'transit']);
 const SESSION_DAYS = 30;
@@ -298,21 +306,31 @@ export default async (req, context) => {
     const fromCity = str(o.fromCity, 40), toCity = str(o.toCity, 40);
     const name = str(o.name, 60), phone = str(o.phone, 20).replace(/[^\d+\-\s]/g, '');
     if (!fromCity || !toCity || !name || phone.replace(/\D/g, '').length < 9) return json(400, { error: 'חסרים פרטים בהזמנה' });
-    const p = price({ fromCity, toCity, qty: o.qty, size: o.size, kind: o.kind, extra: o.extra });
+    // טופס ההזמנה החדש שולח כמות לכל גודל: pkgs = { s: קטנות, m: בינוניות, l: גדולות }
+    let qty = o.qty, size = str(o.size, 20), mix = '', extraIn = o.extra;
+    if (o.pkgs && typeof o.pkgs === 'object') {
+      const n = k => Math.min(50, Math.max(0, parseInt(o.pkgs[k], 10) || 0));
+      const ps = n('s'), pm = n('m'), pl = n('l');
+      if (ps + pm + pl < 1) return json(400, { error: 'בחרו לפחות חבילה אחת' });
+      qty = ps + pm + pl; size = pl ? 'גדולה' : pm ? 'בינונית' : 'קטנה';
+      mix = [ps && ps + ' × קטנה', pm && pm + ' × בינונית', pl && pl + ' × גדולה'].filter(Boolean).join(', ');
+      if (isRL(fromCity) || isRL(toCity)) extraIn = extraFor(ps, pm);
+    }
+    const p = price({ fromCity, toCity, qty, size, kind: o.kind, extra: extraIn });
     const agreed = Math.round(Number(o.agreed) * 100) / 100;
     let priceRec;
     if (p && !p.needExtra) priceRec = { total: p.total, extra: p.extra || 0, agreed: false, text: p.total + '₪' };
     else if (agreed >= 1 && agreed <= MAX_AMOUNT) priceRec = { total: agreed, extra: 0, agreed: true, byCustomer: true, text: agreed + '₪ (הלקוח הזין, לבדוק מול מה שסוכם)' };
     else priceRec = { total: null, extra: 0, agreed: false, text: 'בתיאום' };
-    const extra = isRL(fromCity) || isRL(toCity) ? Number(o.extra) || 0 : 0;
+    const extra = isRL(fromCity) || isRL(toCity) ? Number(extraIn) || 0 : 0;
     const [gf, gt] = await Promise.all([geocode(str(o.fromStreet, 80), canon(fromCity) || fromCity), geocode(str(o.toStreet, 80), canon(toCity) || toCity)]);
     const now = Date.now();
     const order = {
       id: newId(), token: rnd(10), createdAt: now, status: 'new', history: [{ s: 'new', at: now }],
-      customer: { name, phone, receiver: str(o.receiver, 80) },
+      customer: { name, phone, receiver: str(o.receiver, 80), sender: str(o.sender, 80), payer: o.payer === 'receiver' ? 'receiver' : o.payer === 'sender' ? 'sender' : '' },
       from: { city: canon(fromCity) || fromCity, street: str(o.fromStreet, 80), floor: str(o.fromFloor, 10), apt: str(o.fromApt, 10), lat: gf?.lat ?? null, lng: gf?.lng ?? null },
       to: { city: canon(toCity) || toCity, street: str(o.toStreet, 80), floor: str(o.toFloor, 10), apt: str(o.toApt, 10), lat: gt?.lat ?? null, lng: gt?.lng ?? null },
-      pkg: { size: str(o.size, 20), qty: Math.min(100, Math.max(1, parseInt(o.qty, 10) || 1)), care: str(o.care, 20), kind: str(o.kind, 30) },
+      pkg: { size, qty: Math.min(150, Math.max(1, parseInt(qty, 10) || 1)), mix, care: str(o.care, 20), kind: str(o.kind, 30) },
       extra, extraTxt: EXTRA_TXT[extra] || '', price: priceRec,
       schedule: { date: str(o.date, 12), window: str(o.window, 20) }, notes: str(o.details, 400),
       pay: { method: ['card', 'bit', 'cash'].includes(o.payMethod) ? o.payMethod : 'pending', paid: false, deal: null },

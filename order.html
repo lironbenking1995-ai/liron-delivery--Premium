@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>הזמנת משלוח אונליין | לירון משלוחים</title>
+<meta name="description" content="הזמנת משלוח אונליין: בוחרים חבילות, כתובת איסוף ומסירה, ומקבלים מחיר מיד. לירון משלוחים, מהיום למחר.">
+<meta name="theme-color" content="#0b0c0f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0c0f;--panel:#14171d;--panel2:#1b1f27;--line:#2a2f3a;--gold:#ffd12c;--gold2:#e0a800;--text:#f4f4f5;--muted:#a6abb5;--ok:#34c37a;--bad:#ff7a7a;--r:18px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:132px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Heebo,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-tap-highlight-color:transparent;padding-bottom:150px}
+a{color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:40;background:#0b0c0fee;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex:1;min-width:0}
+.brand img{width:58px;height:41px;border-radius:9px;object-fit:cover;border:1.5px solid var(--gold)}
+.brand b{display:block;font-weight:900;font-size:1.05rem;line-height:1.1}
+.brand small{color:var(--gold);font-weight:700;font-size:.8rem}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);text-decoration:none;font-weight:800;font-size:.9rem;white-space:nowrap}
+.iconbtn.wa{background:#25d366;border-color:#25d366;color:#06140c}
+.chips{max-width:760px;margin:0 auto;display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 14px 0 12px;border-radius:100px;border:1px solid var(--line);background:var(--panel);font-weight:700;font-size:.88rem;color:var(--muted);cursor:pointer}
+.chip i{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:900;border:1.5px solid currentColor}
+.chip.on{color:var(--gold);border-color:var(--gold);background:#2a220a}
+.chip.done{color:var(--ok)}
+.chip.done i{background:var(--ok);border-color:var(--ok);color:#06140c}
+main{max-width:760px;margin:0 auto;padding:18px 16px 0}
+h1{font-size:clamp(1.7rem,6.5vw,2.3rem);font-weight:900;line-height:1.15;margin:4px 0 6px}
+h1 span{color:var(--gold)}
+.lead{color:var(--muted);margin:0 0 18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 16px;margin:0 0 14px}
+.card>h2{display:flex;align-items:center;gap:12px;font-size:1.2rem;font-weight:900;margin:0 0 14px}
+.card>h2 .n{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--panel2);color:var(--gold);font-weight:900;border:1px solid var(--line)}
+.card.done>h2 .n{background:var(--ok);color:#06140c;border-color:var(--ok)}
+.card>h2 small{font-size:.82rem;color:var(--muted);font-weight:600;margin-inline-start:auto}
+.pk{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);margin-bottom:10px}
+.pk.has{border-color:var(--gold);background:#221d0b}
+.pk svg{flex:none;width:44px;height:44px;color:var(--gold)}
+.pk .t{flex:1;min-width:0}
+.pk b{display:block;font-weight:800;font-size:1.05rem}
+.pk small{color:var(--muted);font-size:.85rem}
+.qty{display:flex;align-items:center;gap:10px}
+.qty button{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:1.4rem;font-weight:800;cursor:pointer;line-height:1}
+.qty button.plus{background:var(--gold);border-color:var(--gold);color:#0a0a0a}
+.qty button:disabled{opacity:.35}
+.qty output{min-width:22px;text-align:center;font-weight:900;font-size:1.15rem}
+.note{font-size:.85rem;color:var(--muted);margin:6px 2px 0}
+.note.warn{color:#ffcf66}
+.f{margin-bottom:12px}
+.f label{display:block;font-weight:800;font-size:.95rem;margin:0 2px 6px}
+.f label small{color:var(--muted);font-weight:500}
+.f input,.f textarea,.f select{width:100%;min-height:50px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--bg);outline:none;font-size:16px}
+.f textarea{min-height:84px;resize:vertical}
+.f input:focus,.f textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px #ffd12c33}
+.f input.bad{border-color:var(--bad)}
+.f .err{display:none;color:var(--bad);font-size:.85rem;margin:5px 2px 0}
+.f input.bad~.err{display:block}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;text-align:start;padding:15px 14px;border:1.5px solid var(--line);border-radius:16px;background:var(--panel2);margin-bottom:10px;cursor:pointer}
+.opt .dot{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--muted);display:grid;place-items:center}
+.opt[hidden]{display:none}
+.opt[aria-checked="true"]{border-color:var(--gold);background:#221d0b}
+.opt[aria-checked="true"] .dot{border-color:var(--gold)}
+.opt[aria-checked="true"] .dot:after{content:"";width:11px;height:11px;border-radius:50%;background:var(--gold)}
+.opt b{display:block;font-weight:800;font-size:1.02rem}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.opt .tag{margin-inline-start:auto;flex:none;font-weight:900;color:var(--gold);font-size:.95rem}
+.opts2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts2 .opt{margin:0}
+.price{border:1.5px dashed #ffd12c80;border-radius:var(--r);background:#1a160a;padding:16px;margin:0 0 14px}
+.price .big{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.price .big span{font-weight:800}
+.price .big b{font-size:1.9rem;font-weight:900;color:var(--gold)}
+.price ul{list-style:none;padding:0;margin:10px 0 0;color:var(--muted);font-size:.9rem}
+.price li{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.price p{margin:8px 0 0;color:var(--muted);font-size:.88rem}
+.agree{display:flex;align-items:flex-start;gap:10px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);cursor:pointer;margin-top:4px}
+.agree input{width:22px;height:22px;accent-color:var(--gold);flex:none;margin-top:2px}
+.agree.bad{border-color:var(--bad);animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:45;background:#12151bf7;border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.foot .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.prog{flex:1;min-width:0}
+.dots{display:flex;gap:5px;margin-bottom:6px}
+.dots i{flex:1;max-width:34px;height:6px;border-radius:4px;background:#3a404c}
+.dots i.ok{background:var(--gold)}
+.prog small{display:block;color:var(--muted);font-size:.8rem;font-weight:700}
+.prog b{display:block;font-size:.98rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.go{flex:none;min-height:54px;padding:0 20px;border-radius:16px;border:0;background:linear-gradient(180deg,#ffdb4d,var(--gold2));color:#0a0a0a;font-weight:900;font-size:1.02rem;cursor:pointer;box-shadow:0 8px 24px #ffd12c33;max-width:60%}
+.go:disabled{opacity:.6}
+.modal{position:fixed;inset:0;z-index:100;background:#000c;display:none;align-items:center;justify-content:center;padding:14px}
+.modal.on{display:flex}
+.sheet{width:min(520px,100%);max-height:calc(100vh - 28px);overflow:auto;background:var(--panel);border:1px solid #ffd12c55;border-radius:22px;padding:18px}
+.sheet h3{margin:0 0 8px;font-size:1.25rem;font-weight:900}
+.sheet .x{float:left;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-size:1.1rem;cursor:pointer}
+.paybox{position:relative;width:100%;height:min(640px,calc(100vh - 140px));border-radius:14px;overflow:hidden;background:#fff}
+.paybox iframe{width:100%;height:100%;border:0}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border-radius:14px;border:1px solid var(--line);background:var(--bg);font-weight:900;text-decoration:none;cursor:pointer;margin-top:10px}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#0a0a0a}
+.btn.wa{background:#25d366;border-color:#25d366;color:#06140c}
+.sent{text-align:center}
+.sent img{width:100%;max-width:400px;height:auto;border-radius:14px;display:block;margin:0 auto}
+.sent .fb{display:none;padding:26px 0 8px}
+.sent .fb .ck{width:84px;height:84px;border-radius:50%;background:#2f8f5b;margin:0 auto 12px;display:grid;place-items:center;font-size:44px;color:#fff;animation:pop .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{from{transform:scale(0)}}
+.sent .id{font-weight:900;margin:10px 0 0}
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:120;background:#000;border:1px solid var(--gold);color:#fff;padding:10px 16px;border-radius:12px;font-weight:700;display:none;max-width:90vw;text-align:center}
+.formerr{background:#3a1414;border:1px solid var(--bad);color:#ffd4d4;border-radius:14px;padding:12px 14px;margin:0 0 14px;display:none}
+@media (max-width:380px){.row2,.opts2{grid-template-columns:1fr}.go{padding:0 14px;font-size:.95rem}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="/" aria-label="לירון משלוחים, לדף הבית"><img src="data:image/webp;base64,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" alt=""><span><b>לירון משלוחים</b><small>מהיום למחר</small></span></a>
+    <a class="iconbtn" href="/">🏠 ראשי</a>
+    <a class="iconbtn wa" href="https://wa.me/972525068475" target="_blank" rel="noopener">וואטסאפ</a>
+  </div>
+  <nav class="chips" id="chips" aria-label="שלבי ההזמנה"></nav>
+</header>
+
+<main>
+  <h1>הזמנת <span>משלוח</span> אונליין</h1>
+  <p class="lead">בוחרים חבילות, כתובת איסוף ומסירה, ומקבלים מחיר מיד.</p>
+  <div class="formerr" id="formErr" role="alert"></div>
+
+  <section class="card" id="s1" data-step="1" data-name="חבילות">
+    <h2><span class="n">1</span>גודל וכמות החבילות</h2>
+    <div class="pk" data-k="s"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M10 16h28l-2 26H12z"/><path d="M18 16v-3a6 6 0 0 1 12 0v3"/></svg><div class="t"><b>קטנה</b><small>עד 40×30×30 ס"מ</small></div><div class="qty"><button type="button" class="minus" aria-label="פחות קטנות">−</button><output>0</output><button type="button" class="plus" aria-label="עוד קטנה">+</button></div></div>
+    <div class="pk" data-k="m"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M6 15l18-8 18 8v19l-18 8-18-8z"/><path d="M6 15l18 8 18-8M24 23v19"/></svg><div class="t"><b>בינונית</b><small>עד 50×40×40 ס"מ</small></div><div class="qty"><button type="button" class="minus" aria-label="פחות בינוניות">−</button><output>0</output><button type="button" class="plus" aria-label="עוד בינונית">+</button></div></div>
+    <div class="pk" data-k="l"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M4 16l20-9 20 9v18l-20 9-20-9z"/><path d="M4 16l20 9 20-9M24 25v18M14 11.5l20 9"/></svg><div class="t"><b>גדולה</b><small>עד 70×50×50 ס"מ</small></div><div class="qty"><button type="button" class="minus" aria-label="פחות גדולות">−</button><output>0</output><button type="button" class="plus" aria-label="עוד גדולה">+</button></div></div>
+    <p class="note" id="pkNote">בוחרים כמה חבילות מכל גודל.</p>
+  </section>
+
+  <section class="card" id="s2" data-step="2" data-name="כתובת איסוף">
+    <h2><span class="n">2</span>כתובת איסוף (מוצא)</h2>
+    <div class="f"><label for="fromCity">יישוב</label><input id="fromCity" list="cityList" autocomplete="address-level2" placeholder="למשל: אשקלון" required><p class="err">בחרו יישוב מהרשימה</p></div>
+    <p class="note warn" id="fromOut" hidden>היישוב לא נמצא במחירון שלנו, אז המחיר ייקבע בתיאום בוואטסאפ.</p>
+    <div class="f"><label for="fromStreet">רחוב ומספר</label><input id="fromStreet" autocomplete="address-line1" placeholder="למשל: הרצל 12" required><p class="err">כתבו רחוב ומספר בית</p></div>
+    <div class="row2"><div class="f"><label for="fromFloor">קומה <small>(לא חובה)</small></label><input id="fromFloor" inputmode="numeric" maxlength="6"></div><div class="f"><label for="fromApt">דירה <small>(לא חובה)</small></label><input id="fromApt" maxlength="8"></div></div>
+    <div class="f"><label for="fromNotes">הערות לשליח באיסוף <small>(לא חובה)</small></label><textarea id="fromNotes" maxlength="160" placeholder="קוד כניסה, מיקום מדויק…"></textarea></div>
+  </section>
+
+  <section class="card" id="s3" data-step="3" data-name="פרטי מוסר">
+    <h2><span class="n">3</span>פרטי המוסר (באיסוף)</h2>
+    <div class="f"><label for="sName">שם מלא</label><input id="sName" autocomplete="name" placeholder="שם איש הקשר באיסוף" maxlength="50"><p class="err">כתבו שם</p></div>
+    <div class="f"><label for="sPhone">טלפון</label><input id="sPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="050-0000000" dir="ltr" maxlength="14"><p class="err">מספר טלפון לא תקין</p></div>
+  </section>
+
+  <section class="card" id="s4" data-step="4" data-name="כתובת מסירה">
+    <h2><span class="n">4</span>כתובת מסירה (יעד)</h2>
+    <div class="f"><label for="toCity">יישוב</label><input id="toCity" list="cityList" placeholder="למשל: אשדוד" required><p class="err">בחרו יישוב מהרשימה</p></div>
+    <p class="note warn" id="toOut" hidden>היישוב לא נמצא במחירון שלנו, אז המחיר ייקבע בתיאום בוואטסאפ.</p>
+    <div class="f"><label for="toStreet">רחוב ומספר</label><input id="toStreet" placeholder="למשל: הבנים 4" required><p class="err">כתבו רחוב ומספר בית</p></div>
+    <div class="row2"><div class="f"><label for="toFloor">קומה <small>(לא חובה)</small></label><input id="toFloor" inputmode="numeric" maxlength="6"></div><div class="f"><label for="toApt">דירה <small>(לא חובה)</small></label><input id="toApt" maxlength="8"></div></div>
+    <div class="f"><label for="toNotes">הערות לשליח במסירה <small>(לא חובה)</small></label><textarea id="toNotes" maxlength="160" placeholder="קוד כניסה, קומה, מיקום מדויק…"></textarea></div>
+  </section>
+
+  <section class="card" id="s5" data-step="5" data-name="פרטי מקבל">
+    <h2><span class="n">5</span>פרטי המקבל (במסירה)</h2>
+    <div class="f"><label for="rName">שם מלא</label><input id="rName" placeholder="שם איש הקשר במסירה" maxlength="50"><p class="err">כתבו שם</p></div>
+    <div class="f"><label for="rPhone">טלפון</label><input id="rPhone" type="tel" inputmode="tel" placeholder="050-0000000" dir="ltr" maxlength="14"><p class="err">מספר טלפון לא תקין</p></div>
+  </section>
+
+  <section class="card" id="s6" data-step="6" data-name="סוג משלוח">
+    <h2><span class="n">6</span>סוג המשלוח</h2>
+    <div role="radiogroup" aria-label="סוג המשלוח" id="kindG">
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="מהיום למחר"><span class="dot"></span><span><b>מהיום למחר</b><small>אוספים היום, מסירה עד 24 שעות</small></span><span class="tag">מחיר מיידי</span></button>
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="מהיום להיום"><span class="dot"></span><span><b>מהיום להיום</b><small>איסוף היום, ומסירה במהלך היום</small></span><span class="tag">בתיאום</span></button>
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="ספיישל / שליחות מיידית"><span class="dot"></span><span><b>ספיישל / שליחות מיידית</b><small>איסוף ומסירה מיידית</small></span><span class="tag">בתיאום</span></button>
+    </div>
+  </section>
+
+  <section class="card" id="s7" data-step="7" data-name="מי משלם">
+    <h2><span class="n">7</span>מי פותח את ההזמנה?<small>(בעל החשבון לצורך התשלום)</small></h2>
+    <div class="opts2" role="radiogroup" aria-label="מי משלם" id="payerG">
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="sender"><span class="dot"></span><span><b>המוסר</b><small>כתובת האיסוף</small></span></button>
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="receiver"><span class="dot"></span><span><b>המקבל</b><small>כתובת המסירה</small></span></button>
+    </div>
+  </section>
+
+  <div class="price" id="priceBox" aria-live="polite">
+    <div class="big"><span id="pLabel">מחיר המשלוח</span><b id="pTotal">—</b></div>
+    <ul id="pList"></ul>
+    <p id="pNote">המחיר מחושב אוטומטית לפי גודל החבילות, המרחק בין המוצא ליעד וסוג המשלוח. המחיר כולל מע"מ.</p>
+  </div>
+
+  <section class="card" id="s8" data-name="תשלום">
+    <h2><span class="n">₪</span>איך תרצו לשלם?</h2>
+    <div role="radiogroup" aria-label="אמצעי תשלום" id="payG">
+      <button type="button" class="opt" role="radio" aria-checked="true" data-v="card"><span class="dot"></span><span><b>אשראי באתר</b><small>תשלום מאובטח, עד 24 תשלומים</small></span></button>
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="bit"><span class="dot"></span><span><b>bit</b><small>מעבירים את הסכום באפליקציית bit</small></span></button>
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="link"><span class="dot"></span><span><b>קישור תשלום מהיר</b><small>אשראי · Apple Pay · Google Pay</small></span></button>
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="wa"><span class="dot"></span><span><b>מזומן לשליח / תיאום בוואטסאפ</b><small>שולחים את ההזמנה ומתאמים</small></span></button>
+    </div>
+    <p class="note warn" id="payCoord" hidden>המחיר של המשלוח הזה נקבע בתיאום, אז שולחים את ההזמנה בוואטסאפ ומתאמים מחיר ותשלום.</p>
+    <label class="agree" id="agreeBox"><input type="checkbox" id="agree"><span>קראתי ואני מסכים/ה <a href="/#pricing" target="_blank" rel="noopener" style="color:var(--gold)">לתנאי השירות והמחירון</a>, כולל דמי המתנה, שינוי כתובת וביטול.</span></label>
+  </section>
+  <p class="note" style="text-align:center;margin:6px 0 20px">צריכים עזרה? <a href="tel:0525068475" style="color:var(--gold);font-weight:800">052-5068475</a></p>
+</main>
+
+<datalist id="cityList"></datalist>
+
+<footer class="foot">
+  <div class="in">
+    <div class="prog"><div class="dots" id="dots"></div><small id="progTxt">0 מתוך 7 שלבים</small><b id="missTxt">חסר: חבילות</b></div>
+    <button type="button" class="go" id="goBtn">השלימו: חבילות</button>
+  </div>
+</footer>
+
+<div class="modal" id="payModal" role="dialog" aria-modal="true" aria-label="תשלום מאובטח"><div class="sheet"><button type="button" class="x" data-close aria-label="סגירה">✕</button><h3>תשלום מאובטח באשראי</h3><p class="note" id="payAmt" style="margin:0 0 10px"></p><div class="paybox"><iframe id="payFrame" title="טופס תשלום מאובטח" allow="payment"></iframe></div></div></div>
+
+<div class="modal" id="sentModal" role="dialog" aria-modal="true" aria-label="ההזמנה נשלחה"><div class="sheet sent">
+  <img id="sentGif" alt="המשלוח נשלח" width="400" height="293">
+  <div class="fb" id="sentFb"><div class="ck">✓</div><h3>המשלוח נשלח!</h3></div>
+  <p class="id" id="sentId"></p>
+  <p class="note" id="sentTxt" style="font-size:.95rem"></p>
+  <div id="sentBtns"></div>
+  <a class="btn" id="sentTrack" target="_blank" rel="noopener">📍 מעקב אחרי המשלוח</a>
+  <button type="button" class="btn" data-close>סגירה</button>
+</div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+"use strict";
+var P={"CITIES":{"אשקלון":0,"ברכיה":5,"בת הדר":6,"גיאה":6,"הודיה":7,"מבקיעים":7,"זיקים":8,"באר גנים":8,"ניצן":8,"תלמי יפה":9,"ניצנים":10,"כרמיה":10,"משען":10,"ניר ישראל":12,"כוכב מיכאל":12,"שדה עוזיה":15,"אמונים":16,"באר טוביה":18,"ניר גלים":18,"אשדוד":20,"עזריקם":21,"שתולים":22,"חצב":22,"ניר בנים":23,"קריית מלאכי":24,"בני דרום":25,"גן יבנה":25,"גבעת וושינגטון":28,"קבוצת יבנה":30,"גן הדרום":30,"ביצרון":31,"כנות":33,"בני עי\"ש":34,"יבנה":35,"גדרה":35,"בית גמליאל":37,"כפר הנגיד":38,"קריית עקרון":38,"מזכרת בתיה":38,"גאליה":39,"רחובות":42,"כפר אביב":40,"פלמחים":42,"עיינות":42,"בית חנן":43,"נס ציונה":43,"נטעים":44,"גן שורק":44,"בית עובד":44,"כפר אהרון":44,"ראשון לציון":48,"באר יעקב":47,"רמלה":50,"לוד":53,"גני הדר":45,"כרמי יוסף":46,"יד רמב\"ם":47,"פדיה":48,"נען":47,"רמות מאיר":45,"נצר סירני":48,"צפריה":52,"גינתון":54,"בן שמן":55,"כפר דניאל":55,"גמזו":55,"מצליח":52,"יציץ":50,"סתריה":49,"כפר בן נון":49},"RL":["רמלה","לוד","גני הדר","כרמי יוסף","יד רמב\"ם","פדיה","נען","רמות מאיר","נצר סירני","צפריה","גינתון","בן שמן","כפר דניאל","גמזו","מצליח","יציץ","סתריה","כפר בן נון"],"ALIAS":{"קרית עקרון":"קריית עקרון","ראשל\"צ":"ראשון לציון","ראשלצ":"ראשון לציון","נס-ציונה":"נס ציונה","יד רמבם":"יד רמב\"ם","קרית מלאכי":"קריית מלאכי","בני עיש":"בני עי\"ש","אשקלון העיר":"אשקלון"},"TIERS":[[20,50],[30,65],[40,80],[50,95]],"RL_BASE":110,"EXTRA_STEP":10,"EXTRA_MAX":100};
+var WA='972525068475',BIT='https://www.bitpay.co.il/app/me/2ED1CA70-A6BD-C40F-8D68-84DD3604E9C2D6CD',LINK='https://doc.chat-invoice.co.il/p/7aUcpdpq';
+var API='/.netlify/functions/app-api';
+function $(id){return document.getElementById(id)}
+function norm(v){return String(v||'').replace(/[-–־]/g,' ').replace(/[״"׳']/g,function(m){return (m==="'"||m==='׳')?'':'"'}).replace(/\s+/g,' ').trim()}
+function canon(raw){var k=P.ALIAS[norm(raw)]||norm(raw);if(k in P.CITIES)return k;var pl=k.replace(/"/g,'');for(var c in P.CITIES)if(c.replace(/"/g,'')===pl)return c;return null}
+var RL={};P.RL.forEach(function(c){RL[c]=1});
+function extraFor(sm,md){var e;if(md===0)e=sm<=1?20:sm<=3?30:sm<=5?40:40+10*Math.ceil((sm-5)/2);else if(md===1)e=sm===0?30:sm===1?40:40+10*Math.ceil((sm-1)/2);else e=50+10*(md-2)+10*Math.ceil(sm/2);return Math.min(100,e)}
+var S={pk:{s:0,m:0,l:0},kind:'',payer:'',pay:'card'};
+try{var saved=JSON.parse(sessionStorage.getItem('lironOrderDraft')||'null');if(saved&&saved.pk)S=saved}catch(e){}
+var cl=$('cityList');Object.keys(P.CITIES).sort(function(a,b){return a.localeCompare(b,'he')}).forEach(function(c){var o=document.createElement('option');o.value=c;cl.appendChild(o)});
+var F=['fromCity','fromStreet','fromFloor','fromApt','fromNotes','sName','sPhone','toCity','toStreet','toFloor','toApt','toNotes','rName','rPhone'];
+try{var fv=JSON.parse(sessionStorage.getItem('lironOrderFields')||'{}');F.forEach(function(k){if(fv[k])$(k).value=fv[k]})}catch(e){}
+function saveDraft(){try{sessionStorage.setItem('lironOrderDraft',JSON.stringify(S));var o={};F.forEach(function(k){o[k]=$(k).value});sessionStorage.setItem('lironOrderFields',JSON.stringify(o))}catch(e){}}
+function phoneOk(v){var d=String(v||'').replace(/\D/g,'');if(d.indexOf('972')===0)d='0'+d.slice(3);return /^0(5\d{8}|[2-4689]\d{7}|7\d{8})$/.test(d)}
+function val(id){return $(id).value.trim()}
+var STEPS=[
+ {id:'s1',name:'חבילות',ok:function(){return S.pk.s+S.pk.m+S.pk.l>0},first:function(){return document.querySelector('#s1 .plus')}},
+ {id:'s2',name:'כתובת איסוף',ok:function(){return val('fromCity').length>1&&val('fromStreet').length>1},fields:['fromCity','fromStreet']},
+ {id:'s3',name:'פרטי מוסר',ok:function(){return val('sName').length>1&&phoneOk(val('sPhone'))},fields:['sName','sPhone']},
+ {id:'s4',name:'כתובת מסירה',ok:function(){return val('toCity').length>1&&val('toStreet').length>1},fields:['toCity','toStreet']},
+ {id:'s5',name:'פרטי מקבל',ok:function(){return val('rName').length>1&&phoneOk(val('rPhone'))},fields:['rName','rPhone']},
+ {id:'s6',name:'סוג משלוח',ok:function(){return !!S.kind},first:function(){return document.querySelector('#kindG .opt')}},
+ {id:'s7',name:'מי משלם',ok:function(){return !!S.payer},first:function(){return document.querySelector('#payerG .opt')}}
+];
+var chips=$('chips'),dots=$('dots');
+STEPS.forEach(function(st,i){var c=document.createElement('button');c.type='button';c.className='chip';c.innerHTML='<i>'+(i+1)+'</i>'+st.name;c.addEventListener('click',function(){goTo(st)});chips.appendChild(c);st.chip=c;dots.appendChild(document.createElement('i'))});
+function goTo(st){var el=$(st.id);el.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(function(){var f=null;if(st.fields){for(var i=0;i<st.fields.length;i++){var x=$(st.fields[i]);if(!x.value.trim()||(x.type==='tel'&&!phoneOk(x.value))){f=x;break}}}else if(st.first)f=st.first();if(f)try{f.focus({preventScroll:true})}catch(e){}},450)}
+// --- price
+function calc(){
+  var n=S.pk.s+S.pk.m+S.pk.l,fc=canon(val('fromCity')),tc=canon(val('toCity'));
+  $('fromOut').hidden=!(val('fromCity').length>1&&!fc);$('toOut').hidden=!(val('toCity').length>1&&!tc);
+  var r={state:'wait',lines:[]};
+  if(!n||!fc||!tc||!S.kind){if(n&&val('fromCity').length>1&&val('toCity').length>1&&(!fc||!tc))r.state='coord',r.why='יישוב מחוץ למחירון';return r}
+  if(S.kind!=='מהיום למחר'){r.state='coord';r.why=S.kind+': המחיר נקבע בתיאום';return r}
+  if(S.pk.l>0){r.state='coord';r.why='חבילה גדולה: המחיר נקבע בתיאום';return r}
+  var far=Math.max(P.CITIES[fc],P.CITIES[tc]),rl=RL[fc]||RL[tc],unit=rl?P.RL_BASE:(P.TIERS.filter(function(t){return far<=t[0]})[0]||[])[1];
+  if(!unit){r.state='coord';r.why='מרחק מחוץ למחירון';return r}
+  var extra=rl?extraFor(S.pk.s,S.pk.m):0;
+  r.state='ok';r.unit=unit;r.qty=n;r.extra=extra;r.total=unit*n+extra;
+  r.lines.push([n+' '+(n===1?'חבילה':'חבילות')+' × '+unit+'₪',unit*n+'₪']);if(extra)r.lines.push(['תוספת אזור רמלה-לוד (לפי החבילות)',extra+'₪']);
+  return r;
+}
+var PR={};
+function render(){
+  var done=0,firstMiss=null;
+  STEPS.forEach(function(st,i){var ok=st.ok();st.chip.classList.toggle('done',ok);$(st.id).classList.toggle('done',ok);dots.children[i].classList.toggle('ok',ok);if(ok)done++;else if(!firstMiss)firstMiss=st});
+  ['s','m','l'].forEach(function(k){var row=document.querySelector('.pk[data-k="'+k+'"]');row.querySelector('output').textContent=S.pk[k];row.querySelector('.minus').disabled=!S.pk[k];row.classList.toggle('has',S.pk[k]>0)});
+  var n=S.pk.s+S.pk.m+S.pk.l;$('pkNote').textContent=n?'סה"כ '+n+' '+(n===1?'חבילה':'חבילות')+(S.pk.l?' · חבילה גדולה: המחיר נקבע בתיאום':''):'בוחרים כמה חבילות מכל גודל.';$('pkNote').className='note'+(S.pk.l?' warn':'');
+  document.querySelectorAll('#kindG .opt').forEach(function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===S.kind))});
+  document.querySelectorAll('#payerG .opt').forEach(function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===S.payer))});
+  PR=calc();
+  var list=$('pList');list.textContent='';
+  if(PR.state==='ok'){$('pTotal').textContent=PR.total+'₪';PR.lines.forEach(function(l){var li=document.createElement('li');li.innerHTML='<span></span><span></span>';li.children[0].textContent=l[0];li.children[1].textContent=l[1];list.appendChild(li)})}
+  else if(PR.state==='coord'){$('pTotal').textContent='בתיאום';var li=document.createElement('li');li.textContent=PR.why+'. שולחים את ההזמנה ומתאמים בוואטסאפ.';list.appendChild(li)}
+  else $('pTotal').textContent='—';
+  var coord=PR.state==='coord';$('payCoord').hidden=!coord;
+  document.querySelectorAll('#payG .opt').forEach(function(b){var v=b.getAttribute('data-v');b.hidden=coord&&v!=='wa'});
+  if(coord)S.pay='wa';
+  document.querySelectorAll('#payG .opt').forEach(function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===S.pay))});
+  $('progTxt').textContent=done+' מתוך '+STEPS.length+' שלבים';
+  var g=$('goBtn');
+  if(firstMiss){$('missTxt').textContent='חסר: '+firstMiss.name;g.textContent='השלימו: '+firstMiss.name;g.dataset.miss=firstMiss.id}
+  else{delete g.dataset.miss;$('missTxt').textContent=PR.state==='ok'?'לתשלום: '+PR.total+'₪':'הכול מוכן לשליחה';
+    g.textContent=S.pay==='card'?'תשלום '+PR.total+'₪':S.pay==='bit'?'שליחה ותשלום ב-bit':S.pay==='link'?'שליחה ותשלום בקישור':'שליחת ההזמנה בוואטסאפ'}
+  saveDraft();
+}
+// --- events
+document.querySelectorAll('.pk').forEach(function(row){var k=row.getAttribute('data-k');row.querySelector('.plus').addEventListener('click',function(){if(S.pk[k]<50){S.pk[k]++;render()}});row.querySelector('.minus').addEventListener('click',function(){if(S.pk[k]>0){S.pk[k]--;render()}})});
+function radio(gid,key){document.querySelectorAll('#'+gid+' .opt').forEach(function(b){b.addEventListener('click',function(){S[key]=b.getAttribute('data-v');render()})})}
+radio('kindG','kind');radio('payerG','payer');radio('payG','pay');
+F.forEach(function(k){$(k).addEventListener('input',function(){$(k).classList.remove('bad');render()});$(k).addEventListener('blur',function(){var x=$(k);if(x.type==='tel'&&x.value.trim()&&!phoneOk(x.value))x.classList.add('bad')})});
+$('agree').addEventListener('change',function(){$('agreeBox').classList.remove('bad')});
+// active chip while scrolling
+if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){STEPS.forEach(function(st){var on=st.id===e.target.id;st.chip.classList.toggle('on',on);if(on&&st.chip.scrollIntoView)chips.scrollTo({left:st.chip.offsetLeft-chips.clientWidth/2+st.chip.clientWidth/2,behavior:'smooth'})})}})},{rootMargin:'-140px 0px -60% 0px'});STEPS.forEach(function(st){io.observe($(st.id))})}
+function toast(t){var x=$('toast');x.textContent=t;x.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(function(){x.style.display='none'},3200)}
+function err(t){var e=$('formErr');e.textContent=t;e.style.display=t?'block':'none';if(t)e.scrollIntoView({behavior:'smooth',block:'center'})}
+document.querySelectorAll('[data-close]').forEach(function(b){b.addEventListener('click',function(){b.closest('.modal').classList.remove('on');if(b.closest('#payModal'))$('payFrame').src='about:blank'})});
+// --- submit
+var busy=false;
+function payload(){
+  var snd=val('sName')+' · '+val('sPhone'),rcv=val('rName')+' · '+val('rPhone'),payer=S.payer==='receiver';
+  var notes=[];if(val('fromNotes'))notes.push('הערות איסוף: '+val('fromNotes'));if(val('toNotes'))notes.push('הערות מסירה: '+val('toNotes'));
+  notes.push('מוסר: '+snd);notes.push('מקבל: '+rcv);
+  return {fromCity:val('fromCity'),toCity:val('toCity'),fromStreet:val('fromStreet'),toStreet:val('toStreet'),fromFloor:val('fromFloor'),fromApt:val('fromApt'),toFloor:val('toFloor'),toApt:val('toApt'),
+    name:payer?val('rName'):val('sName'),phone:payer?val('rPhone'):val('sPhone'),receiver:rcv,sender:snd,payer:S.payer,
+    pkgs:S.pk,kind:S.kind,payMethod:S.pay==='card'?'card':S.pay==='bit'?'bit':'pending',details:notes.join(' | ').slice(0,400),src:'order-page'};
+}
+function waText(o,j){
+  var pk=[S.pk.s&&S.pk.s+' קטנה',S.pk.m&&S.pk.m+' בינונית',S.pk.l&&S.pk.l+' גדולה'].filter(Boolean).join(', ');
+  return ['שלום לירון, הזמנתי משלוח באתר 📦','מספר הזמנה: '+j.id,'חבילות: '+pk,'סוג: '+S.kind,'איסוף: '+o.fromStreet+', '+o.fromCity+(o.fromFloor?' · קומה '+o.fromFloor:''),'מוסר: '+o.sender,'מסירה: '+o.toStreet+', '+o.toCity+(o.toFloor?' · קומה '+o.toFloor:''),'מקבל: '+o.receiver,'מחיר: '+(PR.state==='ok'?PR.total+'₪':'בתיאום'),'תשלום: '+({card:'אשראי באתר',bit:'bit',link:'קישור תשלום',wa:'מזומן / בתיאום'})[S.pay],'מעקב: '+j.trackUrl].join('\n');
+}
+function rememberOrder(o,j){try{var a=JSON.parse(localStorage.getItem('myOrders')||'[]');a.unshift({id:j.id,token:j.token,from:canon(o.fromCity)||o.fromCity,to:canon(o.toCity)||o.toCity,at:Date.now()});localStorage.setItem('myOrders',JSON.stringify(a.slice(0,30)))}catch(e){}try{sessionStorage.setItem('ordTrack',j.trackUrl)}catch(e){}}
+function showSent(j,msg){
+  var g=$('sentGif');g.style.display='';$('sentFb').style.display='none';g.onerror=function(){g.style.display='none';$('sentFb').style.display='block'};g.src='/delivery-sent.gif?v=1&t='+Date.now();
+  $('sentId').textContent='מספר הזמנה: '+j.id;var t=$('sentTrack');t.href=j.trackUrl;
+  var bb=$('sentBtns');bb.textContent='';
+  if(S.pay==='bit'){$('sentTxt').textContent='ההזמנה נשמרה. עכשיו משלמים '+PR.total+'₪ ב-bit:';var a=document.createElement('a');a.className='btn gold';a.href=BIT;a.target='_blank';a.rel='noopener';a.textContent='תשלום '+PR.total+'₪ ב-bit';bb.appendChild(a)}
+  else if(S.pay==='link'){$('sentTxt').textContent='ההזמנה נשמרה. בדף התשלום מדביקים את הסכום '+PR.total+'₪:';var l=document.createElement('a');l.className='btn gold';l.href=LINK;l.target='_blank';l.rel='noopener';l.textContent='לתשלום בקישור · '+PR.total+'₪';l.addEventListener('click',function(){try{navigator.clipboard.writeText(String(PR.total))}catch(e){}toast('הסכום '+PR.total+'₪ הועתק')});bb.appendChild(l)}
+  else $('sentTxt').textContent='ההזמנה נשמרה ונפתחה בוואטסאפ. שלחו את ההודעה, ונתאם איתכם איסוף.';
+  var w=document.createElement('a');w.className='btn wa';w.href='https://wa.me/'+WA+'?text='+encodeURIComponent(msg);w.target='_blank';w.rel='noopener';w.textContent='שליחת פרטי ההזמנה בוואטסאפ';bb.appendChild(w);
+  $('toast').style.display='none';$('sentModal').classList.add('on');
+}
+function post(q,body){return fetch(API+'?a='+q,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){if(!r.ok){var e=new Error(j.error||'שגיאה');e.status=r.status;throw e}return j})})}
+$('goBtn').addEventListener('click',function(){
+  err('');var g=$('goBtn');
+  if(g.dataset.miss){var st=STEPS.filter(function(x){return x.id===g.dataset.miss})[0];if(st.fields)st.fields.forEach(function(f){var x=$(f);if(!x.value.trim()||(x.type==='tel'&&!phoneOk(x.value)))x.classList.add('bad')});goTo(st);return}
+  if(!$('agree').checked){var ab=$('agreeBox');ab.classList.remove('bad');void ab.offsetWidth;ab.classList.add('bad');ab.scrollIntoView({behavior:'smooth',block:'center'});toast('מסמנים V באישור התנאים');return}
+  if(busy)return;busy=true;g.disabled=true;var old=g.textContent;g.textContent='שולחים…';
+  var o=payload(),win=null;
+  if(S.pay==='wa')try{win=window.open('about:blank','_blank')}catch(e){}
+  post('create',o).then(function(j){
+    rememberOrder(o,j);var msg=waText(o,j);try{sessionStorage.setItem('ordMsg',msg)}catch(e){}
+    if(S.pay==='card'){
+      return fetch('/.netlify/functions/pay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId:j.id,name:o.name,phone:o.phone,back:'order'})}).then(function(r){return r.json().catch(function(){return{}}).then(function(d){if(!r.ok||!d.url)throw new Error(d.error||'לא הצלחנו לפתוח את דף התשלום');return d})})
+      .then(function(d){$('payAmt').textContent='לתשלום: '+d.amount+'₪ · מספר הזמנה '+j.id+' · אפשר לחלק עד 24 תשלומים';$('toast').style.display='none';$('payFrame').src=d.url;$('payModal').classList.add('on')})
+      .catch(function(e){err((e.message||'התשלום לא נפתח')+'. ההזמנה נשמרה (מספר '+j.id+'), אפשר לשלם ב-bit או בוואטסאפ.');S.pay='wa';render()});
+    }
+    if(S.pay==='wa'){var u='https://wa.me/'+WA+'?text='+encodeURIComponent(msg);if(win&&!win.closed)try{win.location.href=u}catch(e){}}
+    showSent(j,msg);
+    try{sessionStorage.removeItem('lironOrderDraft');sessionStorage.removeItem('lironOrderFields')}catch(e){}
+  }).catch(function(e){if(win)try{win.close()}catch(_){}err(e.status===429?e.message:(e.message||'לא הצלחנו לשלוח את ההזמנה')+'. נסו שוב או כתבו לנו בוואטסאפ.')})
+  .then(function(){busy=false;g.disabled=false;g.textContent=old;render()});
+});
+if(/[?&]pay=failed/.test(location.search))err('התשלום באשראי לא הושלם ולא חויבתם. אפשר לנסות שוב, או לבחור bit או וואטסאפ.');
+render();
+})();
+</script>
+</body>
+</html>
