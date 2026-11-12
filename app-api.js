@@ -42,7 +42,10 @@ function isRL(raw) { const c = canon(raw); return c !== null && RL.has(c); }
 function price(o) {
   const a = km(o.fromCity), b = km(o.toCity);
   if (a === null || b === null) return null;
-  if (o.kind !== 'מהיום למחר' || o.size === 'גדולה') return null;
+  // תוספת לפי סוג המשלוח, פעם אחת להזמנה
+  const KIND_EXTRA = { 'מהיום למחר': 0, 'מהיום להיום': 30, 'ספיישל / שליחות מיידית': 50, 'שליחות מיידית': 50 };
+  const rush = KIND_EXTRA[String(o.kind || '').trim()];
+  if (rush === undefined || o.size === 'גדולה') return null;
   const far = Math.max(a, b);
   const rl = isRL(o.fromCity) || isRL(o.toCity);
   const local = canon(o.fromCity) === LOCAL_CITY && canon(o.toCity) === LOCAL_CITY;
@@ -54,7 +57,7 @@ function price(o) {
     extra = Number(o.extra);
     if (!(extra >= EXTRA_STEP && extra <= EXTRA_MAX && extra % EXTRA_STEP === 0)) return { needExtra: true };
   }
-  return { unit, qty, extra, total: unit * qty + extra };
+  return { unit, qty, extra, rush, total: unit * qty + extra + rush };
 }
 
 const EXTRA_TXT = {10:'מעטפה או מסמכים',20:'חבילה קטנה אחת',30:'2–3 חבילות קטנות, או בינונית אחת',40:'בינונית + קטנה, או 4–5 קטנות',50:'2 חבילות בינוניות',60:'חבילה גדולה אחת',70:'גדולה + קטנה או בינונית',80:'2 גדולות, או 3–4 בינוניות',90:'כמה חבילות גדולות',100:'משלוח מלא'};

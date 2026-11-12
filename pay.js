@@ -26,6 +26,7 @@ const EXTRA_STEP = 10, EXTRA_MAX = 100;
 const ALIAS = { 'קרית עקרון': 'קריית עקרון', 'ראשל"צ': 'ראשון לציון', 'ראשלצ': 'ראשון לציון', 'נס-ציונה': 'נס ציונה', 'יד רמבם': 'יד רמב"ם', 'קרית מלאכי': 'קריית מלאכי', 'בני עיש': 'בני עי"ש', 'אשקלון העיר': 'אשקלון' };
 const TIERS = [[20, 50], [30, 65], [40, 80], [50, 95]];
 const RL_BASE = 110; // מחיר בסיס לאזור רמלה-לוד, לפני התוספת
+const LOCAL_CITY = 'אשקלון', LOCAL_UNIT = 25; // משלוח בתוך אשקלון (איסוף ומסירה בעיר): 25 ₪ לכל חבילה
 const API = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 const MAX_AMOUNT = 10000;      // סכום מקסימלי לחיוב באתר (₪)
 const MAX_PAYMENTS = 24;       // מספר תשלומים מקסימלי
@@ -45,10 +46,14 @@ function isRL(raw) { const c = canon(raw); return c !== null && RL.has(c); }
 function price(o) {
   const a = km(o.fromCity), b = km(o.toCity);
   if (a === null || b === null) return null;
-  if (o.kind !== 'מהיום למחר' || o.size === 'גדולה') return null;
+  // תוספת לפי סוג המשלוח, פעם אחת להזמנה
+  const KIND_EXTRA = { 'מהיום למחר': 0, 'מהיום להיום': 30, 'ספיישל / שליחות מיידית': 50, 'שליחות מיידית': 50 };
+  const rush = KIND_EXTRA[String(o.kind || '').trim()];
+  if (rush === undefined || o.size === 'גדולה') return null;
   const far = Math.max(a, b);
   const rl = isRL(o.fromCity) || isRL(o.toCity);
-  const unit = rl ? RL_BASE : (TIERS.find(t => far <= t[0]) || [])[1];
+  const local = canon(o.fromCity) === LOCAL_CITY && canon(o.toCity) === LOCAL_CITY;
+  const unit = local ? LOCAL_UNIT : rl ? RL_BASE : (TIERS.find(t => far <= t[0]) || [])[1];
   if (!unit) return null;
   const qty = Math.min(100, Math.max(1, parseInt(o.qty, 10) || 1));
   let extra = 0;
@@ -56,7 +61,7 @@ function price(o) {
     extra = Number(o.extra);
     if (!(extra >= EXTRA_STEP && extra <= EXTRA_MAX && extra % EXTRA_STEP === 0)) return { needExtra: true };
   }
-  return { unit, qty, extra, total: unit * qty + extra };
+  return { unit, qty, extra, rush, total: unit * qty + extra + rush };
 }
 const json = (code, body) => new Response(JSON.stringify(body), { status: code, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
