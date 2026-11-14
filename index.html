@@ -425,6 +425,90 @@ $('srchX').addEventListener('click',close);$('srch').addEventListener('click',fu
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('srch').classList.contains('on'))close();if((e.key==='/'||(e.key==='k'&&(e.ctrlKey||e.metaKey)))&&!/INPUT|TEXTAREA/.test((document.activeElement||{}).tagName||'')){e.preventDefault();open()}});
 })();
 </script>
+<style>
+.abar{background:linear-gradient(90deg,#e0a800,#ffd12c 30%,#ffe680 50%,#ffd12c 70%,#e0a800);color:#0a0a0a;font:800 15px/1.5 Heebo,Arial,sans-serif;text-align:center;padding:9px 14px;direction:rtl}
+.abar .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 18px}
+.abar .t{font-weight:900}
+@media(max-width:600px){.abar{font-size:14px;padding:7px 10px}.abar .in{flex-direction:column;gap:2px}}
+@media(max-width:430px){.brand-copy{display:none!important}.brand img{width:96px!important;height:66px!important}}
+.abar a{color:#0a0a0a;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:2px;font-weight:900}
+.mbtn{display:none;align-items:center;justify-content:center;width:46px;height:46px;border-radius:14px;border:1px solid #ffffff2a;background:#ffffff0d;color:#fff;cursor:pointer}
+.mbtn svg{width:24px;height:24px}
+.mbtn[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
+@media(max-width:850px){.mbtn{display:inline-flex}}
+#mnav{position:fixed;left:0;right:0;bottom:0;top:var(--mtop,70px);z-index:19;background:#0b0c0ff7;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 40px;direction:rtl;font-family:Heebo,Arial,sans-serif;display:none;animation:mIn .22s ease}
+#mnav.on{display:block}
+@keyframes mIn{from{opacity:0;transform:translateY(-8px)}}
+#mnav .go{display:flex;align-items:center;justify-content:center;gap:10px;min-height:60px;border-radius:16px;background:linear-gradient(180deg,#ffe066,#ffc21a 55%,#e0a800);color:#0a0a0a;font-weight:900;font-size:1.15rem;text-decoration:none;box-shadow:0 10px 26px #ffd12c38;margin-bottom:12px}
+#mnav .go svg{width:24px;height:24px}
+#mnav .it,#mnav summary{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:56px;padding:0 16px;border-radius:14px;color:#f4f4f5;font-weight:700;font-size:1.08rem;text-decoration:none;border-bottom:1px solid #ffffff12;cursor:pointer;list-style:none}
+#mnav summary::-webkit-details-marker{display:none}
+#mnav .it.cur{background:#ffd12c18;border:1px solid #ffd12c55;color:#ffd12c}
+#mnav .it.hl{background:#1b1f27;border:1px solid #2a2f3a}
+#mnav summary svg{width:20px;height:20px;transition:transform .2s;color:#a6abb5}
+#mnav details[open] summary svg{transform:rotate(180deg);color:#ffd12c}
+#mnav details[open] summary{color:#ffd12c}
+#mnav .sub{display:grid;gap:6px;padding:8px 10px 12px}
+#mnav .sub a{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:#14171d;border:1px solid #23272f;color:#e8e9ec;text-decoration:none;font-size:.98rem}
+#mnav .sub a small{color:#ffd12c;font-weight:800;white-space:nowrap}
+#mnav .chips{display:flex;flex-wrap:wrap;gap:8px;padding:8px 10px 12px}
+#mnav .chips a{padding:8px 14px;border-radius:999px;background:#14171d;border:1px solid #2a2f3a;color:#e8e9ec;text-decoration:none;font-size:.92rem}
+#mnav .chips a.all{border-color:#ffd12c80;color:#ffd12c;font-weight:800}
+#mnav .ft{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+#mnav .ft a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:14px;font-weight:900;text-decoration:none}
+#mnav .ft .wa{background:#25d366;color:#05170c}#mnav .ft .ph{border:1px solid #ffd12c80;color:#ffd12c}
+body.mopen{overflow:hidden}
+body.mopen #lpill,body.mopen #waw,body.mopen #lc-btn{display:none!important}
+</style>
+<script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)};
+var top=document.querySelector('header.top');if(!top)return;
+// --- פס הודעה עליון
+var bar=document.createElement('div');bar.className='abar';bar.setAttribute('role','note');
+bar.innerHTML='<div class="in"><span class="t">המשלוח המשתלם מתחיל כאן באתר</span><span><a href="/order.html">הזמנה ותשלום באתר</a> · <a href="https://wa.me/972525068475" target="_blank" rel="noopener">כתבו לנו בוואטסאפ</a></span></div>';
+top.parentNode.insertBefore(bar,top);
+// --- כפתור תפריט
+var nb=top.querySelector('.navbtns');if(!nb)return;
+var b=document.createElement('button');b.type='button';b.className='mbtn';b.id='mBtn';b.setAttribute('aria-label','פתיחת התפריט');b.setAttribute('aria-expanded','false');b.setAttribute('aria-controls','mnav');
+var ICON_M='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',ICON_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+b.innerHTML=ICON_M;nb.appendChild(b);
+var chev='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+var AREAS=['אשקלון','אשדוד','יבנה','גן יבנה','קריית מלאכי','גדרה','רחובות','נס ציונה','ראשון לציון','רמלה','לוד'];
+var nav=document.createElement('nav');nav.id='mnav';nav.setAttribute('aria-label','תפריט ראשי');
+nav.innerHTML=
+ '<a class="go" href="/order.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.4l-1.8-4.9L5 9.7l5.2-1.8z"/><path d="M19 15v4M17 17h4"/></svg>הזמנת משלוח אונליין</a>'+
+ '<a class="it cur" href="#home">דף הבית</a>'+
+ '<details><summary>שירותים'+chev+'</summary><div class="sub">'+
+   '<a href="#calc" data-kind="מהיום למחר">מהיום למחר<small>מחיר רגיל</small></a>'+
+   '<a href="#calc" data-kind="מהיום להיום">מהיום להיום · עד 3 שעות<small><bdi dir="ltr">+30₪</bdi></small></a>'+
+   '<a href="#calc" data-kind="ספיישל / שליחות מיידית">שליחות מיידית<small><bdi dir="ltr">+50₪</bdi></small></a>'+
+   '<a href="#services">קווי חלוקה לעסקים<small>בתיאום</small></a></div></details>'+
+ '<details><summary>אזורי משלוחים'+chev+'</summary><div class="chips">'+AREAS.map(function(c){return '<a href="#calc" data-city="'+c+'">'+c+'</a>'}).join('')+'<a class="all" href="#areas">כל האזורים ←</a></div></details>'+
+ '<a class="it" href="#calc">🧮 מחשבון מחיר</a>'+
+ '<a class="it" href="#pricing">מחירון</a>'+
+ '<a class="it" href="https://www.liron-delivery.com/app.html#/my">📍 מעקב אחרי משלוח</a>'+
+ '<a class="it" href="#about">אודות · למה אנחנו</a>'+
+ '<a class="it hl" href="#quick">צור קשר</a>'+
+ '<a class="it" href="https://www.liron-delivery.com/app.html#/courier">🚚 כניסת שליחים</a>'+
+ '<div class="ft"><a class="wa" href="https://wa.me/972525068475" target="_blank" rel="noopener">וואטסאפ</a><a class="ph" href="tel:0525068475">☎ 052-5068475</a></div>';
+document.body.appendChild(nav);
+function setTop(){var r=top.getBoundingClientRect();nav.style.setProperty('--mtop',Math.max(0,r.bottom)+'px')}
+function open(){setTop();nav.classList.add('on');document.body.classList.add('mopen');b.setAttribute('aria-expanded','true');b.setAttribute('aria-label','סגירת התפריט');b.innerHTML=ICON_X;markCur()}
+function close(){nav.classList.remove('on');document.body.classList.remove('mopen');b.setAttribute('aria-expanded','false');b.setAttribute('aria-label','פתיחת התפריט');b.innerHTML=ICON_M}
+b.addEventListener('click',function(){nav.classList.contains('on')?close():open()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&nav.classList.contains('on')){close();b.focus()}});
+addEventListener('resize',function(){if(nav.classList.contains('on'))setTop();if(innerWidth>850)close()});
+function markCur(){var ids=['quick','calc','pricing','areas','about','services','home'],cur='home';for(var i=0;i<ids.length;i++){var el=$(ids[i]);if(el&&el.getBoundingClientRect().top<innerHeight*.4){cur=ids[i];break}}nav.querySelectorAll('.it[href^="#"]').forEach(function(a){a.classList.toggle('cur',a.getAttribute('href')==='#'+cur)})}
+nav.addEventListener('click',function(e){var a=e.target.closest('a');if(!a)return;
+  var k=a.getAttribute('data-kind'),c=a.getAttribute('data-city');
+  close();
+  if(k){var kb=document.querySelector('#lqKinds [data-v="'+k+'"]');if(kb)kb.click()}
+  if(c){var f=$('lqFrom'),t=$('lqTo');if(f&&t){if(!f.value)f.value='אשקלון';t.value=c;t.dispatchEvent(new Event('input',{bubbles:true}));setTimeout(function(){var cb=$('lqCalcBtn');if(cb)cb.click()},550)}}
+});
+})();
+</script>
 <script>/* צ'אט AI של לירון משלוחים: בועה בפינת המסך שעונה ללקוחות לפי המחירון.
    נדלק רק כשהשרת מדווח שהצ'אט פעיל (יש מפתח ב-Netlify). */
 (function () {
