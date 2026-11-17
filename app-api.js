@@ -26,6 +26,10 @@ const RL_BASE = 110; // מחיר בסיס לאזור רמלה-לוד, לפני �
 const LOCAL_CITY = 'אשקלון', LOCAL_UNIT = 25; // משלוח בתוך אשקלון (איסוף ומסירה בעיר): 25 ₪ לכל חבילה
 const MAX_AMOUNT = 10000;      // סכום מקסימלי לחיוב באתר (₪)
 const MAX_PAYMENTS = 24;       // מספר תשלומים מקסימלי
+const VAT_RATE = 18;             // אחוז מע"מ. כל המחירים בטבלאות הם לפני מע"מ, והלקוח משלם כולל מע"מ
+const r2 = n => Math.round(Number(n) * 100) / 100;
+function withVat(net) { const vat = r2(net * VAT_RATE / 100); return { net: r2(net), vatRate: VAT_RATE, vat, total: r2(net + vat) }; }
+
 
 function norm(v) {
   return String(v || '').replace(/[-–־]/g, ' ').replace(/[״"׳']/g, m => (m === "'" || m === '׳') ? '' : '"').replace(/\s+/g, ' ').trim();
@@ -57,7 +61,7 @@ function price(o) {
     extra = Number(o.extra);
     if (!(extra >= EXTRA_STEP && extra <= EXTRA_MAX && extra % EXTRA_STEP === 0)) return { needExtra: true };
   }
-  return { unit, qty, extra, rush, total: unit * qty + extra + rush };
+  return { unit, qty, extra, rush, ...withVat(unit * qty + extra + rush) };
 }
 
 const EXTRA_TXT = {10:'מעטפה או מסמכים',20:'חבילה קטנה אחת',30:'2–3 חבילות קטנות, או בינונית אחת',40:'בינונית + קטנה, או 4–5 קטנות',50:'2 חבילות בינוניות',60:'חבילה גדולה אחת',70:'גדולה + קטנה או בינונית',80:'2 גדולות, או 3–4 בינוניות',90:'כמה חבילות גדולות',100:'משלוח מלא'};
@@ -444,8 +448,8 @@ export default async (req, context) => {
     const p = price({ fromCity, toCity, qty, size, kind: o.kind, extra: extraIn });
     const agreed = Math.round(Number(o.agreed) * 100) / 100;
     let priceRec;
-    if (p && !p.needExtra) priceRec = { total: p.total, extra: p.extra || 0, agreed: false, text: p.total + '₪' };
-    else if (agreed >= 1 && agreed <= MAX_AMOUNT) priceRec = { total: agreed, extra: 0, agreed: true, byCustomer: true, text: agreed + '₪ (הלקוח הזין, לבדוק מול מה שסוכם)' };
+    if (p && !p.needExtra) priceRec = { total: p.total, net: p.net, vat: p.vat, vatRate: p.vatRate, extra: p.extra || 0, agreed: false, text: (p.total % 1 ? p.total.toFixed(2) : p.total) + '₪ כולל מע"מ ' + p.vatRate + '%' };
+    else if (agreed >= 1 && agreed <= MAX_AMOUNT) priceRec = { total: agreed, net: r2(agreed / (1 + VAT_RATE / 100)), vat: r2(agreed - agreed / (1 + VAT_RATE / 100)), vatRate: VAT_RATE, extra: 0, agreed: true, byCustomer: true, text: agreed + '₪ כולל מע"מ (הלקוח הזין, לבדוק מול מה שסוכם)' };
     else priceRec = { total: null, extra: 0, agreed: false, text: 'בתיאום' };
     const extra = isRL(fromCity) || isRL(toCity) ? Number(extraIn) || 0 : 0;
     const [gf, gt] = await Promise.all([geocode(str(o.fromStreet, 80), canon(fromCity) || fromCity), geocode(str(o.toStreet, 80), canon(toCity) || toCity)]);
@@ -771,7 +775,7 @@ export default async (req, context) => {
       if (body.total !== undefined && body.total !== null && body.total !== '') {
         const t = Math.round(Number(body.total) * 100) / 100;
         if (!(t >= 0 && t <= MAX_AMOUNT)) return json(400, { error: 'מחיר לא תקין' });
-        o.price = { ...o.price, total: t, text: t + '₪', agreed: true };
+        o.price = { ...o.price, total: t, net: r2(t / (1 + VAT_RATE / 100)), vat: r2(t - t / (1 + VAT_RATE / 100)), vatRate: VAT_RATE, text: t + '₪ כולל מע"מ', agreed: true };
       }
       if (body.assignedTo !== undefined) {
         if (!body.assignedTo) { o.assignedTo = null; o.courierName = null; o.courierPhone = null; }

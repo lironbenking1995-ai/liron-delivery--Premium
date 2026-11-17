@@ -30,6 +30,10 @@ const LOCAL_CITY = 'אשקלון', LOCAL_UNIT = 25; // משלוח בתוך אש�
 const API = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 const MAX_AMOUNT = 10000;      // סכום מקסימלי לחיוב באתר (₪)
 const MAX_PAYMENTS = 24;       // מספר תשלומים מקסימלי
+const VAT_RATE = 18;             // אחוז מע"מ. כל המחירים בטבלאות הם לפני מע"מ, והלקוח משלם כולל מע"מ
+const r2 = n => Math.round(Number(n) * 100) / 100;
+function withVat(net) { const vat = r2(net * VAT_RATE / 100); return { net: r2(net), vatRate: VAT_RATE, vat, total: r2(net + vat) }; }
+
 
 function norm(v) {
   return String(v || '').replace(/[-–־]/g, ' ').replace(/[״"׳']/g, m => (m === "'" || m === '׳') ? '' : '"').replace(/\s+/g, ' ').trim();
@@ -61,7 +65,7 @@ function price(o) {
     extra = Number(o.extra);
     if (!(extra >= EXTRA_STEP && extra <= EXTRA_MAX && extra % EXTRA_STEP === 0)) return { needExtra: true };
   }
-  return { unit, qty, extra, rush, total: unit * qty + extra + rush };
+  return { unit, qty, extra, rush, ...withVat(unit * qty + extra + rush) };
 }
 const json = (code, body) => new Response(JSON.stringify(body), { status: code, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
@@ -98,7 +102,7 @@ export default async (req) => {
   const site = process.env.URL || new URL(req.url).origin;
   const ref = saved ? saved.id : 'P' + Date.now().toString(36).toUpperCase();
   console.log('pay link', ref, p.total, agreed ? 'agreed-by-customer' : 'fixed');
-  const desc = `${agreed ? 'סכום מתואם · ' : ''}${p.extra ? 'כולל תוספת ' + p.extra + '₪ · ' : ''}משלוח ${o.size || ''} · ${norm(o.fromCity)} ← ${norm(o.toCity)}`.slice(0, 200);
+  const desc = `${agreed ? 'סכום מתואם · ' : ''}משלוח ${o.size || ''} · ${norm(o.fromCity)} ← ${norm(o.toCity)} · כולל מע"מ ${VAT_RATE}%`.slice(0, 200);
 
   const body = {
     TerminalNumber: terminal,
@@ -129,7 +133,7 @@ export default async (req) => {
       console.error('Cardcom error', data.ResponseCode, data.Description);
       return json(502, { error: 'לא הצלחנו לפתוח דף תשלום. נסו שוב או שלמו ב-bit.' });
     }
-    return json(200, { url: data.Url, amount: p.total, ref, agreed });
+    return json(200, { url: data.Url, amount: p.total, net: p.net ?? null, vat: p.vat ?? null, vatRate: VAT_RATE, ref, agreed });
   } catch (e) {
     console.error(e);
     return json(502, { error: 'חברת הסליקה לא זמינה כרגע. נסו שוב בעוד רגע.' });
