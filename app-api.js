@@ -336,6 +336,31 @@ function publicView(o, loc) {
   };
 }
 
+
+// ---------- כרטיסי לקוחות ----------
+const CUST_RE = /^C\d{3,7}$/;
+const CUST_MAX = 10;                                     // עד 10 כרטיסים בשעה מאותה כתובת
+function custFields(b) {
+  const name = str(b.name, 60), phone = ilPhone(b.phone);
+  if (name.length < 2) return { error: 'כתבו שם מלא' };
+  if (!phone) return { error: 'מספר נייד לא תקין (05X-XXXXXXX)' };
+  const type = b.type === 'business' ? 'business' : 'private';
+  return { name, phone, type, biz: type === 'business' ? str(b.biz, 60) : '', city: str(b.city, 40), street: str(b.street, 80), email: /^[^\s@]{1,64}@[^\s@]{1,100}\.[a-z]{2,}$/i.test(str(b.email, 120)) ? str(b.email, 120) : '', notes: str(b.notes, 300) };
+}
+async function custCreate(s, v, source, by) {
+  const seq = ((await s.get('custSeq', { type: 'json' })) || { n: 1000 }).n + 1;
+  await s.setJSON('custSeq', { n: seq });
+  const dupOf = (await s.get('custPh:' + v.phone, { type: 'json' }))?.id || null;
+  const c = { id: 'C' + seq, token: rnd(10), ...v, source, createdBy: by || null, createdAt: Date.now(), dupOf };
+  await s.setJSON('cust:' + c.id, c);
+  if (!dupOf) await s.setJSON('custPh:' + v.phone, { id: c.id });
+  const idx = (await s.get('custIdx', { type: 'json' })) || []; idx.unshift(c.id); await s.setJSON('custIdx', idx.slice(0, 5000));
+  return c;
+}
+const custPublic = c => ({ id: c.id, name: c.name, phone: c.phone, type: c.type, biz: c.biz, city: c.city, street: c.street, email: c.email, createdAt: c.createdAt });
+function custMsg(c, title) {
+  return ['👤 ' + title, 'מספר לקוח: ' + c.id, 'שם: ' + c.name + (c.biz ? ' (' + c.biz + ')' : ''), 'טלפון: ' + c.phone, c.city || c.street ? 'כתובת: ' + [c.street, c.city].filter(Boolean).join(', ') : '', c.notes ? 'הערות: ' + c.notes : '', c.dupOf ? '⚠️ כבר קיים לקוח עם הטלפון הזה: ' + c.dupOf : ''].filter(Boolean).join('\n');
+}
 export default async (req, context) => {
   const url = new URL(req.url);
   const a = url.searchParams.get('a') || '';
@@ -451,6 +476,24 @@ export default async (req, context) => {
     return json(200, publicView(o, await locOf(s, o.assignedTo)));
   }
 
+  // ---------- כרטיס לקוח: הרשמה עצמית ----------
+  if (a === 'cust-register' && req.method === 'POST') {
+    const ck = await ipKey('rcu:', ip); const cr = await rlGet(s, ck, CREATE_WIN);
+    if (cr.n >= CUST_MAX) { secLog('too many customer signups', ip, cr.n); return json(429, { error: 'נפתחו הרבה כרטיסים מהמכשיר הזה. נסו שוב בעוד שעה או כתבו לנו בוואטסאפ.' }); }
+    const v = custFields(body); if (v.error) return json(400, { error: v.error });
+    cr.n++; await s.setJSON(ck, cr);
+    const c = await custCreate(s, v, 'self');
+    const notified = await waSend(custMsg(c, 'נפתח כרטיס לקוח חדש באפליקציה')).catch(() => false);
+    return json(200, { ok: true, id: c.id, token: c.token, card: custPublic(c), notified });
+  }
+  if (a === 'cust-me') {
+    const id = url.searchParams.get('id') || '', token = url.searchParams.get('t') || '';
+    if (!CUST_RE.test(id)) return json(404, { error: 'לא נמצא' });
+    const c = await s.get('cust:' + id, { type: 'json' });
+    if (!c || !same(c.token, token)) return json(404, { error: 'לא מצאנו את כרטיס הלקוח' });
+    return json(200, { card: custPublic(c) });
+  }
+
   // ---------- שליח: התחברות ----------
   if (a === 'login' && req.method === 'POST') {
     // כניסה עם הקוד האישי בלבד (הטלפון לא חובה)
@@ -562,6 +605,34 @@ export default async (req, context) => {
     if (!role) { await sleep(400); return json(401, { error: 'צריך להתחבר מחדש' }); }
     // ניהול קודי מנהל: רק למפתח
     if (a.startsWith('admin-manager') && role.role !== 'dev') return json(403, { error: 'רק המפתח יכול לנהל קודי מנהל' });
+    // ---------- כרטיסי לקוחות ----------
+    if (a === 'admin-customers') {
+      const idx = (await s.get('custIdx', { type: 'json' })) || [];
+      const list = (await Promise.all(idx.slice(0, 2000).map(id => s.get('cust:' + id, { type: 'json' })))).filter(Boolean).map(({ token, ...c }) => c);
+      return json(200, { customers: list });
+    }
+    if (a === 'admin-customer-save' && req.method === 'POST') {
+      const v = custFields(body); if (v.error) return json(400, { error: v.error });
+      if (body.id) {
+        const id = String(body.id); if (!CUST_RE.test(id)) return json(400, { error: 'מספר לקוח לא תקין' });
+        const c = await s.get('cust:' + id, { type: 'json' }); if (!c) return json(404, { error: 'הלקוח לא נמצא' });
+        const upd = { ...c, ...v, updatedAt: Date.now(), updatedBy: role.name };
+        await s.setJSON('cust:' + id, upd);
+        if (c.phone !== upd.phone) { await s.delete('custPh:' + c.phone); await s.setJSON('custPh:' + upd.phone, { id }); }
+        const { token, ...out } = upd; return json(200, { ok: true, customer: out });
+      }
+      const c = await custCreate(s, v, 'admin', role.name);
+      const { token, ...out } = c; return json(200, { ok: true, customer: out });
+    }
+    if (a === 'admin-customer-delete' && req.method === 'POST') {
+      const id = String(body.id || ''); if (!CUST_RE.test(id)) return json(400, { error: 'מספר לקוח לא תקין' });
+      const c = await s.get('cust:' + id, { type: 'json' }); if (!c) return json(404, { error: 'הלקוח לא נמצא' });
+      await s.delete('cust:' + id);
+      const ph = await s.get('custPh:' + c.phone, { type: 'json' }); if (ph && ph.id === id) await s.delete('custPh:' + c.phone);
+      const idx = (await s.get('custIdx', { type: 'json' })) || []; await s.setJSON('custIdx', idx.filter(x => x !== id));
+      secLog('customer deleted', ip, id + ' by ' + role.name);
+      return json(200, { ok: true });
+    }
     if (a === 'admin-managers') {
       const list = (await s.get('managers', { type: 'json' })) || [];
       return json(200, { managers: [...envManagers().map(m => ({ id: m.id, name: m.name, env: true, active: true })), ...list.map(m => ({ id: m.id, name: m.name, active: m.active !== false, createdAt: m.createdAt, lastLogin: m.lastLogin || null }))] });
