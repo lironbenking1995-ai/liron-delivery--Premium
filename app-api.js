@@ -342,8 +342,54 @@ function publicView(o, loc) {
 
 
 // ---------- כרטיסי לקוחות ----------
+const newPin = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); return String(100000 + (a[0] % 900000)); };
 const CUST_RE = /^C\d{3,7}$/;
 const CUST_MAX = 10;                                     // עד 10 כרטיסים בשעה מאותה כתובת
+
+// ---------- תמחור אישי ללקוח (נקבע רק ע"י המנהל) ----------
+// mode: 'list' מחירון רגיל · 'fixed' מחיר קבוע לחבילה לפני מע"מ · 'percent' הנחה באחוזים מהמחירון
+function custRate(b) {
+  b = b && typeof b === 'object' ? b : {};
+  const mode = ['fixed', 'percent'].includes(b.mode) ? b.mode : 'list';
+  const num = (v, lo, hi) => { const n = Math.round(Number(v) * 100) / 100; return n >= lo && n <= hi ? n : null; };
+  const r = { mode, unit: num(b.unit, 1, 5000), local: num(b.local, 1, 5000), large: num(b.large, 1, 5000), pct: num(b.pct, 1, 90), rush: b.rush !== false, rl: b.rl !== false, note: str(b.note, 120) };
+  if (mode === 'fixed' && !r.unit) return { error: 'הזינו מחיר קבוע לחבילה' };
+  if (mode === 'percent' && !r.pct) return { error: 'הזינו אחוז הנחה בין 1 ל-90' };
+  return r;
+}
+const rateTxt = r => !r || r.mode === 'list' ? 'מחירון רגיל' : r.mode === 'percent' ? r.pct + '% הנחה מהמחירון' : r.unit + '₪ לחבילה' + (r.local ? ' · בתוך אשקלון ' + r.local + '₪' : '') + ' (לפני מע"מ)';
+// מחשב מחיר להזמנה, עם תמחור אישי אם יש ללקוח
+function quoteFor(i, rate) {
+  const n = k => Math.min(50, Math.max(0, parseInt((i.pkgs || {})[k], 10) || 0));
+  const ps = n('s'), pm = n('m'), pl = n('l'), qty = ps + pm + pl, kind = str(i.kind, 30);
+  if (!qty) return { state: 'wait' };
+  const fc = canon(str(i.fromCity, 40)), tc = canon(str(i.toCity, 40));
+  const KX = { 'מהיום למחר': 0, 'מהיום להיום': 30, 'ספיישל / שליחות מיידית': 50, 'שליחות מיידית': 50 };
+  const custom = rate && rate.mode !== 'list';
+  if (custom && rate.mode === 'fixed') {
+    if (pl && !rate.large) return { state: 'coord', why: 'חבילה גדולה: המחיר נקבע בתיאום' };
+    if ((!fc || !tc) && !(i.fromCity && i.toCity)) return { state: 'wait' };
+    const local = fc === LOCAL_CITY && tc === LOCAL_CITY, unit = local && rate.local ? rate.local : rate.unit;
+    const rl = (isRL(fc) || isRL(tc)) && rate.rl ? extraFor(ps, pm) : 0, rush = rate.rush ? (KX[kind] || 0) : 0;
+    const lines = [[(ps + pm) + ' ' + (ps + pm === 1 ? 'חבילה' : 'חבילות') + ' × ' + unit + '₪ (מחיר מוסכם' + (local && rate.local ? ', בתוך אשקלון' : '') + ')', unit * (ps + pm)]];
+    if (pl) lines.push([pl + ' × גדולה × ' + rate.large + '₪ (מחיר מוסכם)', rate.large * pl]);
+    if (rl) lines.push(['תוספת אזור רמלה-לוד', rl]); if (rush) lines.push(['תוספת ' + (rush === 30 ? 'מהיום להיום' : 'שליחות מיידית'), rush]);
+    const net = unit * (ps + pm) + (pl ? rate.large * pl : 0) + rl + rush;
+    return { state: 'ok', fc: fc || str(i.fromCity, 40), tc: tc || str(i.toCity, 40), lines, extra: rl, custom: true, rateTxt: rateTxt(rate), ...withVat(net) };
+  }
+  if (!fc || !tc) return { state: 'coord', why: 'יישוב מחוץ למחירון' };
+  if (pl) return { state: 'coord', why: 'חבילה גדולה: המחיר נקבע בתיאום' };
+  const extra = isRL(fc) || isRL(tc) ? extraFor(ps, pm) : 0;
+  const p = price({ fromCity: fc, toCity: tc, qty, size: pm ? 'בינונית' : 'קטנה', kind, extra });
+  if (!p || p.needExtra) return { state: 'coord', why: 'מחוץ למחירון' };
+  const lines = [[qty + ' ' + (qty === 1 ? 'חבילה' : 'חבילות') + ' × ' + p.unit + '₪', p.unit * qty]];
+  if (p.extra) lines.push(['תוספת אזור רמלה-לוד', p.extra]); if (p.rush) lines.push(['תוספת ' + (p.rush === 30 ? 'מהיום להיום' : 'שליחות מיידית'), p.rush]);
+  if (custom && rate.mode === 'percent') {
+    const off = r2(p.net * rate.pct / 100); lines.push(['הנחה אישית ' + rate.pct + '%', -off]);
+    return { state: 'ok', fc, tc, lines, extra: p.extra, custom: true, rateTxt: rateTxt(rate), ...withVat(p.net - off) };
+  }
+  return { state: 'ok', fc, tc, lines, extra: p.extra, ...withVat(p.net) };
+}
 function custFields(b) {
   const name = str(b.name, 60), phone = ilPhone(b.phone);
   if (name.length < 2) return { error: 'כתבו שם מלא' };
@@ -355,7 +401,7 @@ async function custCreate(s, v, source, by) {
   const seq = ((await s.get('custSeq', { type: 'json' })) || { n: 1000 }).n + 1;
   await s.setJSON('custSeq', { n: seq });
   const dupOf = (await s.get('custPh:' + v.phone, { type: 'json' }))?.id || null;
-  const c = { id: 'C' + seq, token: rnd(10), ...v, source, createdBy: by || null, createdAt: Date.now(), dupOf };
+  const c = { id: 'C' + seq, token: rnd(10), pin: newPin(), ...v, source, createdBy: by || null, createdAt: Date.now(), dupOf };
   await s.setJSON('cust:' + c.id, c);
   if (!dupOf) await s.setJSON('custPh:' + v.phone, { id: c.id });
   const idx = (await s.get('custIdx', { type: 'json' })) || []; idx.unshift(c.id); await s.setJSON('custIdx', idx.slice(0, 5000));
@@ -469,13 +515,17 @@ export default async (req, context) => {
       const cu = await s.get('cust:' + o.custId, { type: 'json' });
       if (cu && same(cu.token, String(o.custToken || ''))) {
         order.custId = cu.id; order.customer.custName = cu.name; order.customer.biz = cu.biz || '';
+        if (cu.rate && cu.rate.mode !== 'list') {
+          const q = quoteFor({ fromCity, toCity, pkgs: o.pkgs, kind: o.kind }, cu.rate);
+          if (q.state === 'ok') { order.price = { total: q.total, net: q.net, vat: q.vat, vatRate: q.vatRate, extra: q.extra || 0, agreed: false, custom: true, rate: q.rateTxt, text: (q.total % 1 ? q.total.toFixed(2) : q.total) + '₪ כולל מע"מ ' + q.vatRate + '% · מחיר מוסכם' }; order.extra = q.extra || 0; }
+        }
         const co = (await s.get('custOrd:' + cu.id, { type: 'json' })) || []; co.unshift(order.id); await s.setJSON('custOrd:' + cu.id, co.slice(0, 200));
       }
     }
     await s.setJSON('o:' + order.id, order);
     const idx = await readIdx(s); idx.unshift(order.id); await s.setJSON('idx', idx.slice(0, 1000));
     const site = process.env.URL || url.origin;
-    return json(200, { id: order.id, token: order.token, trackUrl: `${site}/app.html#/track/${order.id}.${order.token}`, price: priceRec });
+    return json(200, { id: order.id, token: order.token, trackUrl: `${site}/app.html#/track/${order.id}.${order.token}`, price: order.price });
   }
 
   // ---------- לקוח: מעקב ----------
@@ -497,6 +547,16 @@ export default async (req, context) => {
     const notified = await waSend(custMsg(c, 'נפתח כרטיס לקוח חדש באפליקציה')).catch(() => false);
     return json(200, { ok: true, id: c.id, token: c.token, card: custPublic(c), notified });
   }
+  // ---------- כניסת לקוח: טלפון + קוד כניסה אישי ----------
+  if (a === 'cust-login' && req.method === 'POST') {
+    if (await isLocked(s, ip)) return tooMany();
+    const phone = ilPhone(body.phone), pin = String(body.pin || '').replace(/\D/g, '');
+    const ref = phone ? await s.get('custPh:' + phone, { type: 'json' }) : null;
+    const c = ref ? await s.get('cust:' + ref.id, { type: 'json' }) : null;
+    if (!c || !c.pin || !same(c.pin, pin)) { await noteFail(s, ip, 'cust-login'); await sleep(800); return json(401, { error: 'הטלפון או קוד הכניסה לא נכונים' }); }
+    c.lastLogin = Date.now(); await s.setJSON('cust:' + c.id, c);
+    return json(200, { ok: true, id: c.id, token: c.token, card: custPublic(c) });
+  }
   if (a === 'cust-me') {
     const id = url.searchParams.get('id') || '', token = url.searchParams.get('t') || '';
     if (!CUST_RE.test(id)) return json(404, { error: 'לא נמצא' });
@@ -504,22 +564,14 @@ export default async (req, context) => {
     if (!c || !same(c.token, token)) return json(404, { error: 'לא מצאנו את כרטיס הלקוח' });
     const ids = ((await s.get('custOrd:' + c.id, { type: 'json' })) || []).slice(0, 30);
     const orders = (await Promise.all(ids.map(i => s.get('o:' + i, { type: 'json' })))).filter(Boolean).map(o => ({ id: o.id, token: o.token, createdAt: o.createdAt, status: o.status, from: { city: o.from.city, street: o.from.street }, to: { city: o.to.city, street: o.to.street }, receiver: o.customer.receiver, pkg: o.pkg, price: o.price, paid: !!(o.pay && o.pay.paid), payMethod: o.pay && o.pay.method }));
-    return json(200, { card: custPublic(c), orders, ai: !!process.env.ANTHROPIC_API_KEY, cities: Object.keys(CITIES) });
+    if (!c.pin) { c.pin = newPin(); await s.setJSON('cust:' + c.id, c); }
+    return json(200, { card: { ...custPublic(c), pin: c.pin }, rate: c.rate && c.rate.mode !== 'list' ? { ...c.rate, text: rateTxt(c.rate) } : null, orders, ai: !!process.env.ANTHROPIC_API_KEY, cities: Object.keys(CITIES) });
   }
   // ---------- מחיר מהשרת (מקור אמת אחד למחיר) ----------
   if (a === 'quote' && req.method === 'POST') {
-    const n = k => Math.min(50, Math.max(0, parseInt((body.pkgs || {})[k], 10) || 0));
-    const ps = n('s'), pm = n('m'), pl = n('l'), qty = ps + pm + pl;
-    if (!qty) return json(200, { state: 'wait' });
-    const fc = canon(str(body.fromCity, 40)), tc = canon(str(body.toCity, 40));
-    if (!fc || !tc) return json(200, { state: 'coord', why: 'יישוב מחוץ למחירון' });
-    if (pl) return json(200, { state: 'coord', why: 'חבילה גדולה: המחיר נקבע בתיאום' });
-    const extra = isRL(fc) || isRL(tc) ? extraFor(ps, pm) : 0;
-    const p = price({ fromCity: fc, toCity: tc, qty, size: pm ? 'בינונית' : 'קטנה', kind: str(body.kind, 30), extra });
-    if (!p || p.needExtra) return json(200, { state: 'coord', why: 'מחוץ למחירון' });
-    const lines = [[qty + ' ' + (qty === 1 ? 'חבילה' : 'חבילות') + ' × ' + p.unit + '₪', p.unit * qty]];
-    if (p.extra) lines.push(['תוספת אזור רמלה-לוד', p.extra]); if (p.rush) lines.push(['תוספת ' + (p.rush === 30 ? 'מהיום להיום' : 'שליחות מיידית'), p.rush]);
-    return json(200, { state: 'ok', fc, tc, lines, net: p.net, vat: p.vat, vatRate: p.vatRate, total: p.total });
+    let rate = null;
+    if (CUST_RE.test(String(body.custId || ''))) { const cu = await s.get('cust:' + body.custId, { type: 'json' }); if (cu && same(cu.token, String(body.custToken || ''))) rate = cu.rate || null; }
+    const q = quoteFor(body, rate); delete q.extra; return json(200, q);
   }
   // ---------- מילוי חכם עם AI מתוך טקסט חופשי של הלקוח ----------
   if (a === 'cust-ai' && req.method === 'POST') {
@@ -659,11 +711,14 @@ export default async (req, context) => {
     // ---------- כרטיסי לקוחות ----------
     if (a === 'admin-customers') {
       const idx = (await s.get('custIdx', { type: 'json' })) || [];
-      const list = (await Promise.all(idx.slice(0, 2000).map(id => s.get('cust:' + id, { type: 'json' })))).filter(Boolean).map(({ token, ...c }) => ({ ...c, access: token }));
+      const raw = (await Promise.all(idx.slice(0, 2000).map(id => s.get('cust:' + id, { type: 'json' })))).filter(Boolean);
+      for (const c of raw) if (!c.pin) { c.pin = newPin(); await s.setJSON('cust:' + c.id, c); }
+      const list = raw.map(({ token, ...c }) => ({ ...c, access: token }));
       return json(200, { customers: list });
     }
     if (a === 'admin-customer-save' && req.method === 'POST') {
       const v = custFields(body); if (v.error) return json(400, { error: v.error });
+      const rt = custRate(body.rate); if (rt.error) return json(400, { error: rt.error }); v.rate = rt;
       if (body.id) {
         const id = String(body.id); if (!CUST_RE.test(id)) return json(400, { error: 'מספר לקוח לא תקין' });
         const c = await s.get('cust:' + id, { type: 'json' }); if (!c) return json(404, { error: 'הלקוח לא נמצא' });
@@ -674,6 +729,11 @@ export default async (req, context) => {
       }
       const c = await custCreate(s, v, 'admin', role.name);
       const { token, ...out } = c; return json(200, { ok: true, customer: { ...out, access: token } });
+    }
+    if (a === 'admin-customer-pin' && req.method === 'POST') {
+      const id = String(body.id || ''); if (!CUST_RE.test(id)) return json(400, { error: 'מספר לקוח לא תקין' });
+      const c = await s.get('cust:' + id, { type: 'json' }); if (!c) return json(404, { error: 'הלקוח לא נמצא' });
+      c.pin = newPin(); await s.setJSON('cust:' + id, c); return json(200, { ok: true, pin: c.pin });
     }
     if (a === 'admin-customer-delete' && req.method === 'POST') {
       const id = String(body.id || ''); if (!CUST_RE.test(id)) return json(400, { error: 'מספר לקוח לא תקין' });
