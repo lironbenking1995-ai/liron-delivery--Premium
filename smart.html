@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080a0d">
+<meta name="robots" content="noindex">
+<title>לירון משלוחים | ניהול חכם</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/IMG_4754.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080a0d;--panel:#12161c;--panel2:#191d24;--line:#ffffff1c;--gold:#ffd12c;--text:#fff;--muted:#b6bac2;--ok:#7fd49c;--bad:#ff9a9a;--warn:#ffcf8a;--teal:#4fd6cf;--blue:#9cc8ff}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:Heebo,Arial,sans-serif;-webkit-tap-highlight-color:transparent;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+input,textarea,select,button{font:inherit;color:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}
+[hidden]{display:none!important}
+.top{position:sticky;top:0;z-index:20;background:#090b0ff2;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.top b{font-size:1.05rem;font-weight:900}.top small{display:block;color:var(--gold);font-weight:700;font-size:.78rem}
+.who{font-size:.8rem;color:var(--gold);font-weight:800;border:1px solid #ffd12c55;border-radius:99px;padding:6px 12px;background:none;min-height:36px;display:inline-flex;align-items:center}
+main{max-width:720px;margin:0 auto;padding:14px 16px}
+h1{font-size:1.6rem;margin:6px 0 4px;font-weight:900}h2{font-size:1.15rem;margin:0 0 10px;font-weight:900}
+.muted{color:var(--muted)}.small{font-size:.85rem}
+.card{background:linear-gradient(145deg,var(--panel2),#101318);border:1px solid var(--line);border-radius:20px;padding:16px;margin-top:12px}
+.card.gold{border-color:#ffd12c66}.card.teal{border-color:#4fd6cf66}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:14px;border:0;font-weight:800;font-size:.95rem;white-space:nowrap}
+.btn.primary{background:var(--gold);color:#0a0a0a}.btn.ghost{background:#ffffff0d;border:1px solid #ffffff30}.btn.ok{background:#1f6b45;color:#fff}.btn.bad{background:#5a1f1f;color:#ffd6d6}.btn.teal{background:var(--teal);color:#062221}.btn.wa{background:#25d366;color:#06140c}
+.btn.sm{min-height:36px;padding:0 12px;font-size:.85rem;border-radius:11px}.btn.block{width:100%}.btn:disabled{opacity:.5}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.acts .btn{flex:1 1 auto}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;text-align:right}
+.stat small{display:block;color:var(--muted);font-size:.78rem}.stat b{font-size:1.4rem;font-weight:900}.stat.g b{color:var(--gold)}.stat.ok b{color:var(--ok)}.stat.w b{color:var(--warn)}.stat.t b{color:var(--teal)}
+.alert{display:flex;align-items:center;gap:10px;width:100%;text-align:right;padding:11px 14px;border-radius:14px;margin-top:8px;background:#4d1f1f55;border:1px solid #ff9a9a55;font-weight:700;font-size:.92rem}
+.alert.w{background:#4d3a1f55;border-color:#ffcf8a55}.alert.b{background:#1e3a5f55;border-color:#9cc8ff55}
+.alert span{flex:1}.alert b{white-space:nowrap;color:var(--gold)}
+.badge{white-space:nowrap;display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:3px 10px;font-size:.74rem;font-weight:800;background:#ffffff12}
+.badge.new{background:#ffd12c22;color:var(--gold)}.badge.assigned,.badge.picked,.badge.transit{background:#1e3a5f;color:var(--blue)}.badge.delivered{background:#1f4d36;color:var(--ok)}.badge.cancelled{background:#4d1f1f;color:var(--bad)}
+.badge.paid{background:#1f4d36;color:var(--ok)}.badge.unpaid{background:#4d3a1f;color:var(--warn)}.badge.food{background:#4fd6cf22;color:var(--teal)}
+.badge.t0{background:#4fd6cf22;color:var(--teal)}.badge.t1{background:#4d3a1f;color:var(--warn)}.badge.t2{background:#4d1f1f;color:var(--bad)}
+.ord{border-top:1px solid var(--line);padding:12px 0 2px;margin-top:10px}
+.ord:first-of-type{border-top:0;margin-top:0}
+.ord-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.route{margin:8px 0 0;display:grid;gap:3px;font-size:.92rem}.route div{display:flex;gap:8px;align-items:flex-start}
+.route i{font-style:normal;flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.66rem;font-weight:900}.route i.a{background:#2f8f5b}.route i.b{background:#d9443a}
+.sug{margin-top:8px;padding:8px 10px;border-radius:12px;background:#ffd12c12;border:1px dashed #ffd12c66;font-size:.86rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sug span{flex:1;min-width:160px}
+.field{display:flex;flex-direction:column;gap:5px;margin-top:10px}.field label{font-weight:700;font-size:.85rem;color:var(--muted)}
+.field input,.field select,.field textarea,.inp{min-height:46px;border-radius:12px;border:1px solid #ffffff32;background:#0b0d12;color:#fff;padding:0 12px;font-size:1rem;width:100%;min-width:0}
+.field textarea,textarea.inp{padding:10px 12px;min-height:80px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus,.inp:focus{outline:none;border-color:var(--gold)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;background:#0b0d12;border:1px solid var(--line);border-radius:14px;padding:4px;margin-top:12px}
+.seg button{min-height:40px;border:0;border-radius:10px;background:none;color:var(--muted);font-weight:800;font-size:.9rem}.seg button.on{background:var(--gold);color:#0a0a0a}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:10px}
+.chip{flex:none;border:1px solid var(--line);border-radius:99px;padding:7px 13px;font-size:.86rem;font-weight:700;color:var(--muted);background:var(--panel)}
+.chip.on{color:#0a0a0a;background:var(--gold);border-color:var(--gold)}
+.bars{display:grid;gap:7px;margin-top:6px}
+.bar{display:grid;grid-template-columns:96px 1fr 66px;gap:8px;align-items:center;font-size:.86rem}
+.bar .t{height:11px;border-radius:6px;background:#ffffff12;overflow:hidden}.bar .t i{display:block;height:100%;border-radius:6px;background:var(--gold)}
+.bar .v{text-align:left;color:var(--muted);font-variant-numeric:tabular-nums}
+.tbl{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:6px}.tbl th,.tbl td{text-align:right;padding:7px 4px;border-bottom:1px solid var(--line)}.tbl th{color:var(--muted);font-weight:700}
+.copybox{width:100%;min-height:200px;border-radius:12px;border:1px solid var(--line);background:#0b0d12;color:#fff;padding:10px;font-size:.88rem;line-height:1.6;margin-top:8px}
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:30;background:#0b0d12f5;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border:0;border-radius:12px;background:none;color:var(--muted);font-size:.72rem;font-weight:700;min-height:52px;justify-content:center;position:relative}
+.tabbar button .ic{font-size:1.2rem;line-height:1}.tabbar button.on{color:var(--gold);background:#ffd12c12}
+.tabbar .nb{position:absolute;top:4px;inset-inline-start:52%;background:#d9443a;color:#fff;border-radius:99px;font-size:.66rem;padding:0 5px;min-width:16px}
+.toast{position:fixed;bottom:calc(92px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#1f2530;border:1px solid #ffffff30;padding:11px 18px;border-radius:14px;font-weight:700;z-index:60;max-width:90vw;text-align:center}
+.modal{position:fixed;inset:0;z-index:50;background:#000c;display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{width:min(720px,100%);max-height:92vh;overflow:auto;background:var(--panel);border:1px solid #ffd12c55;border-bottom:0;border-radius:22px 22px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+@media(min-width:700px){.modal{align-items:center}.sheet{border-radius:22px;border-bottom:1px solid #ffd12c55}}
+.x{float:left;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-size:1rem}
+.flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.flags label{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid var(--line);border-radius:99px;font-size:.85rem;background:#0b0d12}
+.flags input{accent-color:var(--gold);width:16px;height:16px}
+.price{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;border-radius:14px;border:1.5px dashed #ffd12c80;background:#1a160a}
+.price b{font-size:1.5rem;color:var(--gold)}.price small{color:var(--muted);display:block}
+.price input{width:100px;text-align:center;font-weight:900;font-size:1.2rem}
+.empty{text-align:center;color:var(--muted);padding:20px 8px}
+.err{color:var(--bad);font-weight:700;min-height:1.1em;margin:8px 0 0;font-size:.88rem}
+.hint{color:var(--muted);font-size:.8rem;margin-top:6px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div><b>🧠 ניהול חכם</b><small>לירון משלוחים · חבילות ואוכל</small></div>
+  <div style="display:flex;gap:6px"><a class="who" href="/app.html#/dev">🔧 לוח רגיל</a><button class="who" id="outBtn" hidden>יציאה</button></div>
+</header>
+
+<main>
+  <!-- login -->
+  <section id="v-login" hidden>
+    <h1>כניסת ניהול</h1>
+    <p class="muted">אותו קוד מנהל של לוח הניהול באפליקציה. אם כבר נכנסתם שם מהטלפון הזה, תיכנסו לבד.</p>
+    <div class="card gold">
+      <div class="field"><label for="pinIn">קוד מנהל</label><input id="pinIn" type="password" autocomplete="off" maxlength="40" style="letter-spacing:.3em;text-align:center"></div>
+      <p class="err" id="pinErr"></p>
+      <button class="btn primary block" id="pinGo">כניסה</button>
+    </div>
+  </section>
+
+  <!-- smart board -->
+  <section id="v-board" hidden>
+    <div class="ord-h"><h1>לוח חכם</h1><span class="muted small" id="upd"></span></div>
+    <div id="alerts"></div>
+    <div class="stats" id="stats"></div>
+    <div class="card gold">
+      <div class="ord-h"><h2 style="margin:0">✨ משלוחים שמחכים לשליח</h2><button class="btn primary sm" id="autoAll">שיבוץ חכם לכולם</button></div>
+      <p class="muted small" style="margin:6px 0 0">ההמלצה מתחשבת במרחק של כל שליח מנקודת האיסוף (לפי המיקום החי שלו) ובכמה משלוחים כבר יש לו.</p>
+      <div id="waitList"></div>
+    </div>
+    <div class="card"><h2>🚚 בטיפול עכשיו</h2><div id="liveList"></div></div>
+  </section>
+
+  <!-- food -->
+  <section id="v-food" hidden>
+    <div class="ord-h"><h1>🍔 משלוחי אוכל</h1><button class="btn teal sm" data-quick="food">+ הזמנת אוכל</button></div>
+    <div class="stats" id="foodStats"></div>
+    <div class="seg" id="foodSeg"><button class="on" data-ff="active">פעילות</button><button data-ff="today">היום</button><button data-ff="rest">מסעדות</button></div>
+    <div id="foodBody"></div>
+  </section>
+
+  <!-- routes -->
+  <section id="v-routes" hidden>
+    <h1>🗺 מסלולים לשליחים</h1>
+    <p class="muted">המערכת מסדרת לכל שליח את העצירות לפי הסדר הקצר ביותר: מהמיקום החי שלו (או מאשקלון), כל פעם לעצירה הקרובה, וכל איסוף לפני המסירה שלו.</p>
+    <div id="routeList"></div>
+  </section>
+
+  <!-- customers -->
+  <section id="v-cust" hidden>
+    <h1>👥 לקוחות</h1>
+    <p class="muted small" id="custSub"></p>
+    <input class="inp" id="custQ" type="search" placeholder="חיפוש לפי שם או טלפון" style="margin-top:8px">
+    <div class="chips" id="custChips"></div>
+    <div class="card" id="custList"></div>
+  </section>
+
+  <!-- reports -->
+  <section id="v-rep" hidden>
+    <h1>📊 דוחות</h1>
+    <div class="chips" id="repChips"></div>
+    <div id="repBody"></div>
+  </section>
+</main>
+
+<nav class="tabbar" id="tabbar" hidden>
+  <button data-v="board" class="on"><span class="ic">🧠</span>לוח חכם<span class="nb" id="nbWait" hidden></span></button>
+  <button data-v="food"><span class="ic">🍔</span>אוכל<span class="nb" id="nbFood" hidden></span></button>
+  <button data-v="routes"><span class="ic">🗺</span>מסלולים</button>
+  <button data-v="cust"><span class="ic">👥</span>לקוחות</button>
+  <button data-v="rep"><span class="ic">📊</span>דוחות</button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+/* ============ חיבור לשרת הקיים ============ */
+var API='/.netlify/functions/app-api';
+var DEMO=/[?&]demo=1/.test(location.search)||location.protocol==='file:';
+var $=function(id){return document.getElementById(id)};
+var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del:function(k){try{localStorage.removeItem(k)}catch(e){}}};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function toast(t){var el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(function(){el.hidden=true},2800)}
+function devApi(q,body,pin){
+  if(DEMO)return demoApi(q,body);
+  var h={'content-type':'application/json'};if(pin)h['x-admin-pin']=pin;else h['x-admin-token']=LS.get('dtok','');
+  return fetch(API+'?'+q,{method:body?'POST':'GET',headers:h,body:body?JSON.stringify(body):undefined,cache:'no-store'}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){if(!r.ok){var e=new Error(j.error||'שגיאה');e.status=r.status;throw e}return j})});
+}
+function publicPost(q,body){
+  if(DEMO)return demoApi(q,body);
+  return fetch(API+'?a='+q,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){if(!r.ok){var e=new Error(j.error||'שגיאה');e.status=r.status;throw e}return j})});
+}
+
+/* ============ מחירון (זהה לדף ההזמנה) ============ */
+var P={"CITIES":{"אשקלון":0,"ברכיה":5,"בת הדר":6,"גיאה":6,"הודיה":7,"מבקיעים":7,"זיקים":8,"באר גנים":8,"ניצן":8,"תלמי יפה":9,"ניצנים":10,"כרמיה":10,"משען":10,"ניר ישראל":12,"כוכב מיכאל":12,"שדה עוזיה":15,"אמונים":16,"באר טוביה":18,"ניר גלים":18,"אשדוד":20,"עזריקם":21,"שתולים":22,"חצב":22,"ניר בנים":23,"קריית מלאכי":24,"בני דרום":25,"גן יבנה":25,"גבעת וושינגטון":28,"קבוצת יבנה":30,"גן הדרום":30,"ביצרון":31,"כנות":33,"בני עי\"ש":34,"יבנה":35,"גדרה":35,"בית גמליאל":37,"כפר הנגיד":38,"קריית עקרון":38,"מזכרת בתיה":38,"גאליה":39,"רחובות":42,"כפר אביב":40,"פלמחים":42,"עיינות":42,"בית חנן":43,"נס ציונה":43,"נטעים":44,"גן שורק":44,"בית עובד":44,"כפר אהרון":44,"ראשון לציון":48,"באר יעקב":47,"רמלה":50,"לוד":53,"גני הדר":45,"כרמי יוסף":46,"יד רמב\"ם":47,"פדיה":48,"נען":47,"רמות מאיר":45,"נצר סירני":48,"צפריה":52,"גינתון":54,"בן שמן":55,"כפר דניאל":55,"גמזו":55,"מצליח":52,"יציץ":50,"סתריה":49,"כפר בן נון":49},"RL":["רמלה","לוד","גני הדר","כרמי יוסף","יד רמב\"ם","פדיה","נען","רמות מאיר","נצר סירני","צפריה","גינתון","בן שמן","כפר דניאל","גמזו","מצליח","יציץ","סתריה","כפר בן נון"],"ALIAS":{"קרית עקרון":"קריית עקרון","ראשל\"צ":"ראשון לציון","ראשלצ":"ראשון לציון","נס-ציונה":"נס ציונה","יד רמבם":"יד רמב\"ם","קרית מלאכי":"קריית מלאכי","בני עיש":"בני עי\"ש","אשקלון העיר":"אשקלון"},"TIERS":[[20,50],[30,65],[40,80],[50,95]],"RL_BASE":110};
+var RL={};P.RL.forEach(function(c){RL[c]=1});
+function norm(v){return String(v||'').replace(/[-–־]/g,' ').replace(/[״"׳']/g,function(m){return (m==="'"||m==='׳')?'':'"'}).replace(/\s+/g,' ').trim()}
+function canon(raw){var k=P.ALIAS[norm(raw)]||norm(raw);if(k in P.CITIES)return k;var pl=k.replace(/"/g,'');for(var c in P.CITIES)if(c.replace(/"/g,'')===pl)return c;return null}
+function extraFor(sm,md){var e;if(md===0)e=sm<=1?20:sm<=3?30:sm<=5?40:40+10*Math.ceil((sm-5)/2);else if(md===1)e=sm===0?30:sm===1?40:40+10*Math.ceil((sm-1)/2);else e=50+10*(md-2)+10*Math.ceil(sm/2);return Math.min(100,e)}
+var KINDS={'מהיום למחר':0,'מהיום להיום':30,'ספיישל / שליחות מיידית':50};
+function parcelPrice(fromCity,toCity,pk,kind){
+  var n=pk.s+pk.m+pk.l,fc=canon(fromCity),tc=canon(toCity);
+  if(!n||!fc||!tc)return null; if(pk.l>0)return null;
+  var far=Math.max(P.CITIES[fc],P.CITIES[tc]),rl=RL[fc]||RL[tc],local=fc==='אשקלון'&&tc==='אשקלון',unit=local?25:rl?P.RL_BASE:(P.TIERS.filter(function(t){return far<=t[0]})[0]||[])[1];
+  if(!unit)return null;return unit*n+(rl?extraFor(pk.s,pk.m):0)+(KINDS[kind]||0);
+}
+/* מיקום משוער של יישוב: מרחק מאשקלון בק"מ */
+function cityKm(c){var k=canon(c);return k==null?null:P.CITIES[k]}
+
+/* ============ הגדרות אוכל ומסעדות (נשמרות בטלפון הזה) ============ */
+var FOOD=LS.get('smartFood',{inCity:20,outCity:35,promise:45,prep:20});
+function rests(){return LS.get('smartRests',[])}
+function saveRests(a){LS.set('smartRests',a)}
+var FLAGS=[['hot','🔥 תיק חם'],['cold','❄️ קר'],['drinks','🥤 שתייה'],['fragile','⚠️ לא להפוך'],['noring','🔕 לא לצלצל'],['door','🚪 ליד הדלת']];
+
+/* ============ עזרים ============ */
+var ST={new:'התקבלה',assigned:'שובץ שליח',picked:'נאסף',transit:'בדרך ליעד',delivered:'נמסר',cancelled:'בוטל'};
+var ACTIVE=['assigned','picked','transit'];
+function money(n){return Math.round(n||0).toLocaleString('he-IL')+' ₪'}
+function mins(ts){return Math.max(0,Math.floor((Date.now()-ts)/60000))}
+function minsTxt(m){return m<60?m+' דק\'':Math.floor(m/60)+':'+String(m%60).padStart(2,'0')+' ש\''}
+function km(a,b){var R=6371,t=Math.PI/180,dl=(b.lat-a.lat)*t,dn=(b.lng-a.lng)*t,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x))}
+function addr(p){return [p&&p.street,p&&p.city].filter(Boolean).join(', ')}
+function waNum(ph){var d=String(ph||'').replace(/\D/g,'');if(d.indexOf('0')===0)d='972'+d.slice(1);return d}
+function normPhone(p){var d=String(p||'').replace(/\D/g,'');if(d.indexOf('972')===0)d='0'+d.slice(3);return d}
+function waze(a){return 'https://waze.com/ul?q='+encodeURIComponent(a)+'&navigate=yes'}
+function dayStart(off){var d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+(off||0));return d.getTime()}
+function fresh(l){return l&&l.lat&&Date.now()-l.at<10*60*1000}
+function isFood(o){return /🍔/.test((o.notes||'')+' '+(o.adminNote||''))}
+function foodMeta(o){var s=(o.adminNote||'')+' '+(o.notes||'');var m={};var r=s.match(/מסעדה: ([^|·]+)/);if(r)m.rest=r[1].trim();var c=s.match(/גבייה: (\d+)/);if(c)m.collect=+c[1];var p=s.match(/הכנה: (\d+)/);if(p)m.prep=+p[1];return m}
+function priceOf(o){return o.price&&o.price.total||0}
+function delivAt(o){var h=(o.history||[]).filter(function(x){return x.s==='delivered'})[0];return h?h.at:null}
+function courierById(id){return (D.couriers||[]).filter(function(c){return c.id===id})[0]||null}
+function pickPt(o){return o.from&&o.from.lat?{lat:o.from.lat,lng:o.from.lng}:null}
+function dropPt(o){return o.to&&o.to.lat?{lat:o.to.lat,lng:o.to.lng}:null}
+
+/* ============ עדכון הזמנה — שולח תמיד את כל השדות כמו הלוח הרגיל ============ */
+function update(o,ch){
+  var body={id:o.id,status:o.status,method:o.pay&&o.pay.method||'pending',total:o.price&&o.price.total!=null?o.price.total:'',paid:!!(o.pay&&o.pay.paid),adminNote:o.adminNote||''};
+  for(var k in ch)body[k]=ch[k];
+  return devApi('a=admin-update',body).then(function(j){var i=D.orders.findIndex(function(x){return x.id===o.id});if(i>=0&&j.order)D.orders[i]=j.order;return j});
+}
+function assign(o,cid){var c=courierById(cid);return update(o,{assignedTo:cid,status:o.status==='new'?'assigned':o.status}).then(function(){toast('✓ '+o.id+' שובץ ל'+(c?c.name:'שליח'));render()}).catch(function(e){toast(e.message||'לא נשמר')})}
+
+/* ============ השליח המומלץ ============ */
+function suggest(o){
+  var cs=(D.couriers||[]).filter(function(c){return c.active});if(!cs.length)return null;
+  var pp=pickPt(o),best=null;
+  cs.forEach(function(c){
+    var load=D.orders.filter(function(x){return x.assignedTo===c.id&&ACTIVE.indexOf(x.status)>=0});
+    var dist=null,why=[];
+    if(fresh(c.loc)&&pp){dist=km(c.loc,pp)*1.3;why.push(dist<1?'במרחק '+Math.round(dist*1000)+' מ\' מהאיסוף':(dist.toFixed(1)+' ק"מ מהאיסוף'))}
+    else if(fresh(c.loc)){why.push('משתף מיקום')}
+    else why.push('לא משתף מיקום');
+    var same=load.some(function(x){return x.to&&o.to&&x.to.city===o.to.city});
+    if(same)why.push('כבר נוסע ל'+o.to.city);
+    why.push(load.length?load.length+' בטיפול':'פנוי');
+    var score=(dist!=null?dist:(fresh(c.loc)?12:20))+load.length*6-(same?8:0);
+    if(!best||score<best.score)best={c:c,score:score,why:why.join(' · ')};
+  });
+  return best;
+}
+
+/* ============ סידור מסלול (השכן הקרוב + איסוף לפני מסירה) ============ */
+function routeFor(c){
+  var mine=D.orders.filter(function(o){return o.assignedTo===c.id&&ACTIVE.indexOf(o.status)>=0});
+  var stops=[];
+  mine.forEach(function(o){
+    if(o.status==='assigned')stops.push({k:'p',o:o,pt:pickPt(o),km:cityKm(o.from&&o.from.city),a:addr(o.from)});
+    stops.push({k:'d',o:o,pt:dropPt(o),km:cityKm(o.to&&o.to.city),a:addr(o.to)});
+  });
+  var cur=fresh(c.loc)?{pt:{lat:c.loc.lat,lng:c.loc.lng},km:null}:{pt:null,km:0};
+  var out=[],left=stops.slice(),picked={};
+  mine.forEach(function(o){if(o.status!=='assigned')picked[o.id]=1});
+  function d(a,b){if(a.pt&&b.pt)return km(a.pt,b.pt);var x=a.km!=null?a.km:0,y=b.km!=null?b.km:25;return Math.abs(x-y)+0.01}
+  while(left.length){
+    var ok=left.filter(function(s){return s.k==='p'||picked[s.o.id]});
+    ok.sort(function(a,b){return d(cur,a)-d(cur,b)});
+    var nx=ok[0];out.push({s:nx,dist:d(cur,nx)});if(nx.k==='p')picked[nx.o.id]=1;
+    left.splice(left.indexOf(nx),1);cur=nx;
+  }
+  return out;
+}
+
+/* ============ נתונים ============ */
+var D={orders:[],couriers:[],sys:{}},view='board',foodF='active',repR='week',custF='all';
+function load(){
+  return devApi('a=admin-list').then(function(j){D=j;D.orders=D.orders||[];D.couriers=D.couriers||[];$('upd').textContent='עודכן '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});render()})
+  .catch(function(e){if(e.status===401){LS.del('dtok');showLogin()}else $('upd').textContent='אין חיבור, מנסים שוב…'});
+}
+
+/* ============ ניווט ============ */
+function showLogin(){['board','food','routes','cust','rep'].forEach(function(v){$('v-'+v).hidden=true});$('v-login').hidden=false;$('tabbar').hidden=true;$('outBtn').hidden=true;setTimeout(function(){$('pinIn').focus()},50)}
+function go(v){view=v;$('v-login').hidden=true;$('tabbar').hidden=false;$('outBtn').hidden=DEMO;['board','food','routes','cust','rep'].forEach(function(x){$('v-'+x).hidden=x!==v});document.querySelectorAll('.tabbar button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-v')===v)});try{history.replaceState(null,'','#'+v)}catch(e){}window.scrollTo(0,0);render()}
+document.querySelectorAll('.tabbar button').forEach(function(b){b.addEventListener('click',function(){go(b.getAttribute('data-v'))})});
+$('pinGo').addEventListener('click',function(){var v=$('pinIn').value.trim();if(v.length<4){$('pinErr').textContent='הקישו את הקוד';return}$('pinGo').disabled=true;
+  devApi('a=admin-login',{},v).then(function(j){LS.set('dtok',j.token);LS.set('drole',{role:j.role,name:j.name});$('pinIn').value='';$('pinErr').textContent='';start()}).catch(function(e){$('pinErr').textContent=e.status===401?'הקוד שגוי':(e.message||'אין חיבור')}).then(function(){$('pinGo').disabled=false})});
+$('pinIn').addEventListener('keydown',function(e){if(e.key==='Enter')$('pinGo').click()});
+$('outBtn').addEventListener('click',function(){devApi('a=admin-logout',{}).catch(function(){});LS.del('dtok');LS.del('drole');showLogin()});
+
+/* ============ רינדור ============ */
+function render(){
+  var wait=D.orders.filter(function(o){return o.status==='new'});
+  var food=D.orders.filter(function(o){return isFood(o)&&(o.status==='new'||ACTIVE.indexOf(o.status)>=0)});
+  $('nbWait').hidden=!wait.length;$('nbWait').textContent=wait.length;$('nbFood').hidden=!food.length;$('nbFood').textContent=food.length;
+  if(view==='board')renderBoard();if(view==='food')renderFood();if(view==='routes')renderRoutes();if(view==='cust')renderCust();if(view==='rep')renderRep();
+}
+function badges(o){var m=isFood(o)?mins(o.createdAt):null;var t=m==null?'':'<span class="badge t'+(m>FOOD.promise?2:m>FOOD.promise*.7?1:0)+'">⏱ '+minsTxt(m)+'</span> ';
+  return (isFood(o)?'<span class="badge food">🍔 אוכל</span> ':'')+t+'<span class="badge '+o.status+'">'+ST[o.status]+'</span> <span class="badge '+(o.pay&&o.pay.paid?'paid':'unpaid')+'">'+(o.pay&&o.pay.paid?'שולם':'לא שולם')+'</span>'}
+function ordHtml(o,extra){
+  var fm=isFood(o)?foodMeta(o):{};
+  return '<div class="ord-h"><b>'+esc(o.id)+' · '+esc(o.customer&&o.customer.name||'')+'</b><span>'+badges(o)+'</span></div>'+
+   '<div class="route"><div><i class="a">א</i><span>'+(fm.rest?'<b>'+esc(fm.rest)+'</b> · ':'')+esc(addr(o.from))+'</span></div><div><i class="b">מ</i><span>'+esc(addr(o.to))+'</span></div></div>'+
+   '<div class="muted small" style="margin-top:4px">'+esc(o.price&&o.price.text||'בתיאום')+(o.status==='new'?' · מחכה '+minsTxt(mins(o.createdAt)):'')+(o.courierName?' · 🛵 '+esc(o.courierName):'')+(fm.collect?' · 💵 לגבות '+money(fm.collect):'')+(o.schedule&&o.schedule.date?' · איסוף '+esc(o.schedule.date.split('-').reverse().join('/'))+(o.schedule.window?' '+esc(o.schedule.window):''):'')+'</div>'+(extra||'');
+}
+function nextBtn(o){var N={new:['assigned','לקחתי'],assigned:['picked','✓ נאסף'],picked:['transit','🛵 בדרך'],transit:['delivered','✓ נמסר']}[o.status];return N?'<button class="btn primary sm" data-st="'+esc(o.id)+'" data-to="'+N[0]+'">'+N[1]+'</button>':''}
+function courierSel(o){return '<select class="inp" style="min-height:36px;flex:1 1 140px" data-asg="'+esc(o.id)+'"><option value="">🛵 שיבוץ ידני…</option>'+D.couriers.filter(function(c){return c.active||c.id===o.assignedTo}).map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===o.assignedTo?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select>'}
+function phoneLinks(o){var p=o.customer&&o.customer.phone||'';return p?'<a class="btn ghost sm" href="tel:'+esc(p.replace(/[^\d+]/g,''))+'">☎</a><a class="btn wa sm" target="_blank" rel="noopener" href="https://wa.me/'+waNum(p)+'?text='+encodeURIComponent(custMsg(o))+'">💬 עדכון</a>':''}
+function custMsg(o){var link=location.origin+'/app.html#/track/'+o.id+'.'+o.token;var n=o.customer&&o.customer.name||'';
+  if(isFood(o))return 'שלום '+n+', כאן לירון משלוחים 🍔\nההזמנה שלך '+({new:'התקבלה ✓',assigned:'בטיפול, השליח בדרך למסעדה',picked:'בדרך אליך 🛵',transit:'בדרך אליך 🛵',delivered:'נמסרה. בתיאבון!'}[o.status]||'')+'\nמעקב חי: '+link;
+  return 'שלום '+n+', כאן לירון משלוחים 📦\nמשלוח '+o.id+': '+ST[o.status]+'\nמעקב חי: '+link}
+
+function renderBoard(){
+  var os=D.orders,d0=dayStart(),live=os.filter(function(o){return ACTIVE.indexOf(o.status)>=0}),wait=os.filter(function(o){return o.status==='new'}).sort(function(a,b){return a.createdAt-b.createdAt});
+  var unpaidDone=os.filter(function(o){return o.status==='delivered'&&!(o.pay&&o.pay.paid)});
+  var stuck=live.filter(function(o){var h=(o.history||[]).slice(-1)[0];return h&&Date.now()-h.at>(isFood(o)?40:180)*60000});
+  var noLoc=D.couriers.filter(function(c){return c.active&&!fresh(c.loc)&&os.some(function(o){return o.assignedTo===c.id&&ACTIVE.indexOf(o.status)>=0})});
+  var lateFood=os.filter(function(o){return isFood(o)&&(o.status==='new'||ACTIVE.indexOf(o.status)>=0)&&mins(o.createdAt)>FOOD.promise});
+  var al='';
+  if(lateFood.length)al+='<button class="alert" data-go="food"><span>🍔 '+lateFood.length+' הזמנות אוכל עברו את '+FOOD.promise+' הדקות</span><b>לאוכל ←</b></button>';
+  var old=wait.filter(function(o){return mins(o.createdAt)>15});
+  if(old.length)al+='<button class="alert" data-scroll="waitList"><span>⏰ '+old.length+' הזמנות מחכות לשליח יותר מרבע שעה</span><b>לשבץ ←</b></button>';
+  if(stuck.length)al+='<div class="alert w"><span>🐢 '+stuck.length+' משלוחים לא זזו הרבה זמן: '+stuck.slice(0,4).map(function(o){return esc(o.id)}).join(', ')+'</span></div>';
+  if(noLoc.length)al+='<div class="alert b"><span>📍 '+noLoc.map(function(c){return esc(c.name)}).join(', ')+' עם משלוחים פעילים אבל לא משתפים מיקום</span></div>';
+  if(unpaidDone.length)al+='<button class="alert w" data-go="cust" data-cf="debt"><span>💰 '+unpaidDone.length+' משלוחים נמסרו ולא שולמו ('+money(unpaidDone.reduce(function(t,o){return t+priceOf(o)},0))+')</span><b>לגבייה ←</b></button>';
+  $('alerts').innerHTML=al;
+  var today=os.filter(function(o){return o.createdAt>=d0&&o.status!=='cancelled'});
+  var doneT=os.filter(function(o){var a=delivAt(o);return a&&a>=d0});
+  var sharing=D.couriers.filter(function(c){return c.active&&fresh(c.loc)}).length;
+  $('stats').innerHTML=[['מחכות לשליח',wait.length,wait.length?'w':''],['בדרך עכשיו',live.length,'g'],['נמסרו היום',doneT.length,'ok'],['הכנסות היום',money(today.reduce(function(t,o){return t+priceOf(o)},0)),'g'],
+    ['הזמנות היום',today.length,''],['🍔 אוכל היום',today.filter(isFood).length,'t'],['שליחים משתפים',sharing+'/'+D.couriers.filter(function(c){return c.active}).length,''],['לא שולם (נמסר)',money(unpaidDone.reduce(function(t,o){return t+priceOf(o)},0)),'w']]
+    .map(function(x){return '<div class="stat '+x[2]+'"><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>'}).join('');
+  $('waitList').innerHTML=wait.length?wait.map(function(o){var s=suggest(o);
+    return '<div class="ord">'+ordHtml(o,(s?'<div class="sug"><span>✨ מומלץ: <b>'+esc(s.c.name)+'</b> · '+esc(s.why)+'</span><button class="btn primary sm" data-asgone="'+esc(o.id)+'" data-cid="'+esc(s.c.id)+'">שבץ</button></div>':'<div class="sug"><span>אין שליחים פעילים במערכת</span></div>')+
+      '<div class="acts">'+courierSel(o)+phoneLinks(o)+'</div>')+'</div>'}).join(''):'<div class="empty">אין הזמנות שמחכות 👌</div>';
+  $('autoAll').disabled=!wait.length;
+  $('liveList').innerHTML=live.length?live.sort(function(a,b){return a.createdAt-b.createdAt}).map(function(o){return '<div class="ord">'+ordHtml(o,'<div class="acts">'+nextBtn(o)+courierSel(o)+phoneLinks(o)+'<a class="btn ghost sm" href="/app.html#/devorder/'+esc(o.id)+'">📍 מעקב</a></div>')+'</div>'}).join(''):'<div class="empty">אין משלוחים בדרך כרגע</div>';
+}
+
+function renderFood(){
+  var os=D.orders.filter(isFood),d0=dayStart();
+  var act=os.filter(function(o){return o.status==='new'||ACTIVE.indexOf(o.status)>=0}).sort(function(a,b){return a.createdAt-b.createdAt});
+  var today=os.filter(function(o){return o.createdAt>=d0&&o.status!=='cancelled'});
+  var done=today.filter(function(o){return o.status==='delivered'&&delivAt(o)});
+  var avg=done.length?Math.round(done.reduce(function(t,o){return t+(delivAt(o)-o.createdAt)/60000},0)/done.length):0;
+  var cash=act.reduce(function(t,o){return t+(foodMeta(o).collect||0)},0);
+  $('foodStats').innerHTML=[['פעילות',act.length,'t'],['היום',today.length,''],['זמן ממוצע',avg?minsTxt(avg):'—',avg>FOOD.promise?'w':'ok'],['מזומן לגבייה',money(cash),'g']].map(function(x){return '<div class="stat '+x[2]+'"><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>'}).join('');
+  document.querySelectorAll('#foodSeg button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-ff')===foodF)});
+  var b=$('foodBody');
+  if(foodF==='rest'){renderRests(b);return}
+  var list=foodF==='active'?act:today.slice().sort(function(a,b){return b.createdAt-a.createdAt});
+  var groups=foodF==='active'?[['🧾 התקבלו — מחכות לשליח',list.filter(function(o){return o.status==='new'})],['🥡 שליח בדרך למסעדה',list.filter(function(o){return o.status==='assigned'})],['🛵 בדרך ללקוח',list.filter(function(o){return o.status==='picked'||o.status==='transit'})]]:[['כל ההזמנות של היום',list]];
+  b.innerHTML=groups.map(function(g){return '<div class="card teal"><h2>'+g[0]+' <span class="badge">'+g[1].length+'</span></h2>'+(g[1].length?g[1].map(function(o){var fm=foodMeta(o),ready=fm.prep?o.createdAt+fm.prep*60000:null,s=o.status==='new'?suggest(o):null;
+    return '<div class="ord">'+ordHtml(o,(ready&&o.status==='new'?'<div class="hint">'+(ready>Date.now()?'מוכן בעוד '+minsTxt(Math.round((ready-Date.now())/60000)):'אמור להיות מוכן כבר')+'</div>':'')+
+      (s?'<div class="sug"><span>✨ '+esc(s.c.name)+' · '+esc(s.why)+'</span><button class="btn teal sm" data-asgone="'+esc(o.id)+'" data-cid="'+esc(s.c.id)+'">שבץ</button></div>':'')+
+      '<div class="acts">'+nextBtn(o)+(o.status==='new'?'':courierSel(o))+phoneLinks(o)+'</div>')+'</div>'}).join(''):'<div class="empty">אין</div>')+'</div>'}).join('')||'';
+}
+function renderRests(b){
+  var rs=rests(),d0=dayStart(),m0=new Date(new Date().getFullYear(),new Date().getMonth(),1).getTime();
+  b.innerHTML='<div class="card teal"><h2>🏪 המסעדות שלכם</h2><p class="muted small" style="margin:0">הכתובת, זמן ההכנה והמחיר יתמלאו לבד בכל הזמנה. הרשימה נשמרת בטלפון הזה.</p>'+
+    (rs.length?rs.map(function(r,i){var all=D.orders.filter(function(o){return isFood(o)&&foodMeta(o).rest===r.name&&o.status!=='cancelled'});var m=all.filter(function(o){return o.createdAt>=m0});var owed=m.filter(function(o){return !(o.pay&&o.pay.paid)}).reduce(function(t,o){return t+priceOf(o)},0);
+      return '<div class="ord"><div class="ord-h"><b>'+esc(r.name)+'</b><span class="badge food">'+all.filter(function(o){return o.createdAt>=d0}).length+' היום · '+m.length+' החודש</span></div><div class="muted small">'+esc(r.street+', '+r.city)+(r.phone?' · '+esc(r.phone):'')+' · הכנה '+(r.prep||FOOD.prep)+' דק\''+(r.fee?' · משלוח '+money(r.fee):'')+(owed?' · <b style="color:var(--warn)">חוב החודש '+money(owed)+'</b>':'')+'</div>'+
+      '<div class="acts"><button class="btn teal sm" data-quick="food" data-rest="'+i+'">+ הזמנה</button><button class="btn ghost sm" data-stmt="'+i+'">📄 חשבון חודשי</button><button class="btn ghost sm" data-editrest="'+i+'">עריכה</button><button class="btn bad sm" data-delrest="'+i+'">מחיקה</button></div></div>'}).join(''):'<div class="empty">עוד אין מסעדות</div>')+
+    '<button class="btn primary block" data-editrest="-1" style="margin-top:12px">+ הוספת מסעדה</button></div>'+
+    '<div class="card"><h2>⚙️ הגדרות אוכל</h2><div class="g2"><div class="field"><label>משלוח בתוך העיר ₪</label><input data-fs="inCity" type="number" value="'+FOOD.inCity+'"></div><div class="field"><label>משלוח לעיר אחרת ₪</label><input data-fs="outCity" type="number" value="'+FOOD.outCity+'"></div><div class="field"><label>זמן מסירה מובטח (דק\')</label><input data-fs="promise" type="number" value="'+FOOD.promise+'"></div><div class="field"><label>זמן הכנה רגיל (דק\')</label><input data-fs="prep" type="number" value="'+FOOD.prep+'"></div></div><button class="btn primary block" id="saveFood" style="margin-top:10px">שמירה</button></div>';
+}
+
+function renderRoutes(){
+  var cs=D.couriers.filter(function(c){return c.active});
+  $('routeList').innerHTML=cs.length?cs.map(function(c){var r=routeFor(c);
+    return '<div class="card'+(r.length?' gold':'')+'"><div class="ord-h"><h2 style="margin:0">🛵 '+esc(c.name)+'</h2><span class="badge">'+(fresh(c.loc)?'📍 מיקום חי':'בלי מיקום חי')+' · '+r.length+' עצירות</span></div>'+
+      (r.length?'<ol style="margin:10px 0 0;padding-inline-start:20px;line-height:1.7">'+r.map(function(x){var s=x.s;return '<li><b>'+(s.k==='p'?'📥 איסוף':'🏁 מסירה')+'</b> · '+esc(s.a)+' <span class="muted small">('+esc(s.o.id)+(isFood(s.o)?' 🍔':'')+')</span></li>'}).join('')+'</ol>'+
+       '<div class="acts"><button class="btn primary sm" data-route="'+esc(c.id)+'">📋 טקסט לשליח</button>'+(c.phone?'<a class="btn wa sm" target="_blank" rel="noopener" href="https://wa.me/'+waNum(c.phone)+'?text='+encodeURIComponent(routeText(c,r))+'">💬 שליחה</a>':'')+'<a class="btn ghost sm" target="_blank" rel="noopener" href="'+gmapsRoute(c,r)+'">🗺 גוגל מפות</a></div>':'<div class="empty">אין משלוחים פעילים</div>')+'</div>'}).join(''):'<div class="card empty">אין שליחים פעילים</div>';
+}
+function routeText(c,r){return '🛵 מסלול ל'+c.name+' · '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'\nמסודר לפי הסדר הקצר ביותר\n\n'+r.map(function(x,i){var s=x.s,o=s.o,fm=isFood(o)?foodMeta(o):{};
+  return (i+1)+'. '+(s.k==='p'?'📥 איסוף':'🏁 מסירה')+(fm.rest&&s.k==='p'?' ('+fm.rest+')':'')+'\n   '+s.a+((s.k==='p'?o.from:o.to)&&(s.k==='p'?o.from:o.to).floor?' · קומה '+(s.k==='p'?o.from:o.to).floor:'')+'\n   '+o.id+(s.k==='d'&&fm.collect?' · 💵 לגבות '+fm.collect+'₪':'')+'\n   ניווט: '+waze(s.a)}).join('\n')}
+function gmapsRoute(c,r){var pts=r.map(function(x){return x.s.pt?x.s.pt.lat+','+x.s.pt.lng:x.s.a}).slice(0,10);var o=fresh(c.loc)?c.loc.lat+','+c.loc.lng:'';return 'https://www.google.com/maps/dir/'+(o?encodeURIComponent(o)+'/':'')+pts.map(encodeURIComponent).join('/')}
+
+function custIndex(){var m={};D.orders.forEach(function(o){var p=normPhone(o.customer&&o.customer.phone);if(!p)return;var c=m[p]||(m[p]={phone:o.customer.phone,name:o.customer.name,n:0,total:0,debt:0,last:0,lo:null,food:0});c.n++;if(o.status!=='cancelled')c.total+=priceOf(o);if(o.status==='delivered'&&!(o.pay&&o.pay.paid))c.debt+=priceOf(o);if(isFood(o))c.food++;if(o.createdAt>c.last){c.last=o.createdAt;c.lo=o;c.name=o.customer.name||c.name}});return m}
+function renderCust(){
+  var ci=custIndex(),all=Object.keys(ci).map(function(k){return ci[k]}),q=$('custQ').value.trim().toLowerCase(),qd=normPhone(q);
+  var m30=Date.now()-30*864e5;
+  $('custSub').textContent=all.length+' לקוחות · '+all.filter(function(c){return c.n>1}).length+' חוזרים · '+all.filter(function(c){return c.debt}).length+' עם חוב';
+  $('custChips').innerHTML=[['all','הכל'],['vip','⭐ קבועים (3+)'],['debt','💰 עם חוב'],['lost','😴 לא הזמינו חודש']].map(function(x){return '<button class="chip'+(custF===x[0]?' on':'')+'" data-cf="'+x[0]+'">'+x[1]+'</button>'}).join('');
+  var list=all.filter(function(c){if(custF==='vip'&&c.n<3)return false;if(custF==='debt'&&!c.debt)return false;if(custF==='lost'&&!(c.n>1&&c.last<m30))return false;if(q&&!((c.name||'').toLowerCase().indexOf(q)>=0||(qd.length>=3&&normPhone(c.phone).indexOf(qd)>=0)))return false;return true})
+    .sort(function(a,b){return custF==='debt'?b.debt-a.debt:b.n-a.n||b.last-a.last}).slice(0,150);
+  $('custList').innerHTML=list.length?list.map(function(c){var lo=c.lo;
+    var msg=custF==='lost'?'שלום '+c.name+', כאן לירון משלוחים 📦 מזמן לא שמענו ממך! צריכים משלוח? אנחנו כאן: '+location.origin+'/order.html':custF==='debt'?'שלום '+c.name+', כאן לירון משלוחים. נשארה יתרה לתשלום על המשלוח: '+money(c.debt)+'. אפשר לשלם ב-bit או בהעברה. תודה!':'שלום '+c.name+', כאן לירון משלוחים 📦 ';
+    return '<div class="ord"><div class="ord-h"><b>'+esc(c.name||'ללא שם')+(c.n>=3?' ⭐':'')+'</b><span class="badge">'+c.n+' הזמנות'+(c.food?' · '+c.food+' 🍔':'')+'</span></div><div class="muted small">'+esc(c.phone)+' · סה"כ '+money(c.total)+' · אחרון '+new Date(c.last).toLocaleDateString('he-IL')+(lo?' · '+esc(lo.from.city)+' ← '+esc(lo.to.city):'')+(c.debt?' · <b style="color:var(--warn)">חוב '+money(c.debt)+'</b>':'')+'</div>'+
+      '<div class="acts"><button class="btn primary sm" data-again="'+esc(lo.id)+'">+ הזמנה חוזרת</button><a class="btn wa sm" target="_blank" rel="noopener" href="https://wa.me/'+waNum(c.phone)+'?text='+encodeURIComponent(msg)+'">💬 '+(custF==='lost'?'החזרת לקוח':custF==='debt'?'תזכורת תשלום':'וואטסאפ')+'</a></div></div>'}).join(''):'<div class="empty">אין לקוחות להצגה</div>';
+}
+
+function renderRep(){
+  var R=[['today','היום'],['week','7 ימים'],['month','החודש'],['prev','חודש קודם'],['all','הכל']];
+  $('repChips').innerHTML=R.map(function(x){return '<button class="chip'+(repR===x[0]?' on':'')+'" data-rr="'+x[0]+'">'+x[1]+'</button>'}).join('');
+  var now=new Date(),a=0,b=Infinity;
+  if(repR==='today')a=dayStart();else if(repR==='week')a=dayStart(-6);else if(repR==='month')a=new Date(now.getFullYear(),now.getMonth(),1).getTime();else if(repR==='prev'){a=new Date(now.getFullYear(),now.getMonth()-1,1).getTime();b=new Date(now.getFullYear(),now.getMonth(),1).getTime()}
+  var os=D.orders.filter(function(o){return o.createdAt>=a&&o.createdAt<b});
+  var ok=os.filter(function(o){return o.status!=='cancelled'}),done=os.filter(function(o){return o.status==='delivered'});
+  var rev=ok.reduce(function(t,o){return t+priceOf(o)},0),paid=ok.filter(function(o){return o.pay&&o.pay.paid}).reduce(function(t,o){return t+priceOf(o)},0);
+  var dur=done.map(function(o){var d=delivAt(o);return d?(d-o.createdAt)/60000:null}).filter(function(x){return x!=null});
+  var foodDur=done.filter(isFood).map(function(o){var d=delivAt(o);return d?(d-o.createdAt)/60000:null}).filter(function(x){return x!=null});
+  var onTime=foodDur.length?Math.round(foodDur.filter(function(m){return m<=FOOD.promise}).length/foodDur.length*100):null;
+  function grp(arr,key,val){var m={};arr.forEach(function(o){var k=key(o);if(k==null||k==='')return;m[k]=(m[k]||0)+(val?val(o):1)});return Object.keys(m).map(function(k){return [k,m[k]]}).sort(function(x,y){return y[1]-x[1]})}
+  function bars(e,f){if(!e.length)return '<div class="empty">אין נתונים</div>';var mx=Math.max.apply(null,e.map(function(x){return x[1]}))||1;return '<div class="bars">'+e.map(function(x){return '<div class="bar"><span>'+esc(x[0])+'</span><span class="t"><i style="width:'+Math.round(x[1]/mx*100)+'%"></i></span><span class="v">'+(f?f(x[1]):x[1])+'</span></div>'}).join('')+'</div>'}
+  var hours=grp(ok,function(o){return String(new Date(o.createdAt).getHours()).padStart(2,'0')+':00'}).sort(function(x,y){return x[0]<y[0]?-1:1});
+  var days=grp(ok,function(o){return ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'][new Date(o.createdAt).getDay()]});
+  var methods=grp(ok,function(o){return {card:'אשראי',bit:'bit',cash:'מזומן',pending:'לא נבחר'}[o.pay&&o.pay.method]||'אחר'},priceOf);
+  var cour=D.couriers.map(function(c){var m=done.filter(function(o){return o.assignedTo===c.id});var dd=m.map(function(o){var d=delivAt(o);return d?(d-o.createdAt)/60000:null}).filter(function(x){return x!=null});return [c.name,m.length,m.reduce(function(t,o){return t+priceOf(o)},0),dd.length?Math.round(dd.reduce(function(t,x){return t+x},0)/dd.length):null]}).filter(function(x){return x[1]}).sort(function(x,y){return y[1]-x[1]});
+  var peak=hours.slice().sort(function(x,y){return y[1]-x[1]})[0];
+  var tips=[];
+  if(peak)tips.push('⏰ שעת השיא: '+peak[0]+' ('+peak[1]+' הזמנות). כדאי ששליח נוסף יהיה זמין בשעה הזו.');
+  var topCity=grp(ok,function(o){return o.to&&o.to.city})[0];if(topCity)tips.push('📍 היעד המוביל: '+topCity[0]+' ('+topCity[1]+'). אפשר לאחד משלוחים לשם לאותו שליח.');
+  var cancelR=os.length?Math.round((os.length-ok.length)/os.length*100):0;if(cancelR>=10)tips.push('⚠️ '+cancelR+'% מההזמנות בוטלו. כדאי לבדוק למה.');
+  if(rev>paid)tips.push('💰 '+money(rev-paid)+' עוד לא נגבו. במסך "לקוחות ← עם חוב" יש תזכורת מוכנה בוואטסאפ.');
+  if(onTime!=null)tips.push('🍔 '+onTime+'% ממשלוחי האוכל הגיעו בתוך '+FOOD.promise+' דקות.');
+  $('repBody').innerHTML=!os.length?'<div class="card empty">אין הזמנות בתקופה הזו</div>':
+    '<div class="stats">'+[['הכנסות',money(rev),'g'],['נגבה',money(paid),'ok'],['הזמנות',ok.length,''],['נמסרו',done.length,'ok'],['ממוצע להזמנה',ok.length?money(rev/ok.length):'—',''],['זמן משלוח ממוצע',dur.length?minsTxt(Math.round(dur.reduce(function(t,x){return t+x},0)/dur.length)):'—',''],['🍔 אוכל',ok.filter(isFood).length,'t'],['בוטלו',os.length-ok.length,os.length-ok.length?'w':'']].map(function(x){return '<div class="stat '+x[2]+'"><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>'}).join('')+'</div>'+
+    (tips.length?'<div class="card gold"><h2>✨ תובנות</h2>'+tips.map(function(t){return '<p style="margin:6px 0">'+esc(t)+'</p>'}).join('')+'</div>':'')+
+    '<div class="card"><h2>יעדים מובילים</h2>'+bars(grp(ok,function(o){return o.to&&o.to.city}).slice(0,8))+'</div>'+
+    '<div class="card"><h2>שעות עומס</h2>'+bars(hours)+'</div>'+
+    '<div class="card"><h2>ימים בשבוע</h2>'+bars(days)+'</div>'+
+    '<div class="card"><h2>הכנסות לפי אמצעי תשלום</h2>'+bars(methods,money)+'</div>'+
+    '<div class="card"><h2>לקוחות מובילים</h2>'+bars(grp(ok,function(o){return o.customer&&o.customer.name},priceOf).slice(0,6),money)+'</div>'+
+    (cour.length?'<div class="card"><h2>שליחים</h2><table class="tbl"><tr><th>שליח</th><th>נמסרו</th><th>הכנסות</th><th>זמן ממוצע</th></tr>'+cour.map(function(x){return '<tr><td>'+esc(x[0])+'</td><td>'+x[1]+'</td><td>'+money(x[2])+'</td><td>'+(x[3]!=null?minsTxt(x[3]):'—')+'</td></tr>'}).join('')+'</table></div>':'');
+}
+
+/* ============ הזמנה מהירה (טלפונית / אוכל) + הדבקה חכמה ============ */
+var Q=null;
+function openQuick(type,pre){
+  pre=pre||{};var rs=rests();
+  Q={type:type,pk:pre.pk||{s:1,m:0,l:0},kind:pre.kind||(type==='food'?'ספיישל / שליחות מיידית':'מהיום למחר'),flags:{},touched:false};
+  var food=type==='food';
+  $('sheet').innerHTML='<button class="x" data-close>✕</button><h2>'+(food?'🍔 הזמנת אוכל':'📦 הזמנה טלפונית')+'</h2>'+
+    '<div class="seg" style="margin-top:4px"><button class="'+(food?'':'on')+'" data-qt="parcel">📦 חבילה</button><button class="'+(food?'on':'')+'" data-qt="food">🍔 אוכל</button></div>'+
+    '<div class="card" style="border-style:dashed;margin-top:10px"><b>✨ הדבקה חכמה</b><textarea class="inp" id="qPaste" placeholder="מדביקים כאן הודעת וואטסאפ של הלקוח, והטופס מתמלא לבד" style="margin-top:6px"></textarea><button class="btn ghost sm" id="qParse" style="margin-top:6px">מילוי אוטומטי</button><div class="hint" id="qPHint"></div></div>'+
+    (food?'<div class="field"><label>מסעדה</label><select id="qRest"><option value="">— בחרו —</option>'+rs.map(function(r,i){return '<option value="'+i+'"'+(pre.rest===i?' selected':'')+'>'+esc(r.name)+'</option>'}).join('')+'</select></div>'+(rs.length?'':'<div class="hint">אין עדיין מסעדות. הוסיפו במסך אוכל ← מסעדות, או מלאו כתובת איסוף ידנית.</div>'):'')+
+    '<div class="g2" '+(food?'id="qFromBox" '+(rs.length?'hidden':''):'')+'><div class="field"><label>עיר איסוף</label><input id="qFromCity" list="qCities" value="'+esc(pre.fromCity||'אשקלון')+'"></div><div class="field"><label>כתובת איסוף</label><input id="qFromStreet" value="'+esc(pre.fromStreet||'')+'"></div></div>'+
+    '<div class="g2"><div class="field"><label>'+(food?'טלפון הלקוח':'טלפון המזמין')+'</label><input id="qPhone" type="tel" inputmode="tel" dir="ltr" value="'+esc(pre.phone||'')+'"></div><div class="field"><label>שם</label><input id="qName" value="'+esc(pre.name||'')+'"></div></div>'+
+    '<div class="hint" id="qCust"></div>'+
+    '<div class="g2"><div class="field"><label>עיר מסירה</label><input id="qToCity" list="qCities" value="'+esc(pre.toCity||'')+'"></div><div class="field"><label>כתובת מסירה</label><input id="qToStreet" value="'+esc(pre.toStreet||'')+'"></div></div>'+
+    (food?'<div class="g2"><div class="field"><label>לגבות במזומן ₪</label><input id="qCollect" type="number" inputmode="numeric" placeholder="0"></div><div class="field"><label>זמן הכנה (דק\')</label><input id="qPrep" type="number" inputmode="numeric" value="'+FOOD.prep+'"></div></div><div class="flags">'+FLAGS.map(function(f){return '<label><input type="checkbox" data-flag="'+f[0]+'">'+f[1]+'</label>'}).join('')+'</div>'
+     :'<div class="g2"><div class="field"><label>שם המקבל</label><input id="qRName" value="'+esc(pre.rName||'')+'"></div><div class="field"><label>טלפון המקבל</label><input id="qRPhone" type="tel" dir="ltr" value="'+esc(pre.rPhone||'')+'"></div></div>'+
+      '<div class="g2" style="grid-template-columns:repeat(3,1fr)"><div class="field"><label>קטנות</label><input id="qS" type="number" min="0" value="'+Q.pk.s+'"></div><div class="field"><label>בינוניות</label><input id="qM" type="number" min="0" value="'+Q.pk.m+'"></div><div class="field"><label>גדולות</label><input id="qL" type="number" min="0" value="'+Q.pk.l+'"></div></div>'+
+      '<div class="field"><label>סוג משלוח</label><select id="qKind">'+Object.keys(KINDS).map(function(k){return '<option'+(k===Q.kind?' selected':'')+'>'+k+'</option>'}).join('')+'</select></div>')+
+    '<div class="field"><label>הערות</label><input id="qNotes" placeholder="קומה, קוד, שעה…"></div>'+
+    '<div class="price"><div><small>מחיר המשלוח</small><span id="qCalc" class="small muted"></span></div><input class="inp" id="qPrice" type="number" inputmode="numeric"></div>'+
+    '<p class="err" id="qErr"></p><button class="btn primary block" id="qSave">יצירת ההזמנה</button>'+
+    '<datalist id="qCities">'+Object.keys(P.CITIES).map(function(c){return '<option value="'+esc(c)+'">'}).join('')+'</datalist>';
+  $('modal').classList.add('on');qCalc();if(pre.phone)qCustomer();
+}
+function qv(id){var e=$(id);return e?e.value.trim():''}
+function qCalc(){
+  if(!Q)return;var p=null,why='';
+  if(Q.type==='food'){var r=rests()[qv('qRest')];var from=r?r.city:qv('qFromCity');var to=qv('qToCity');
+    if(r&&r.fee){p=r.fee;why='מחיר קבוע של '+r.name}else{var same=!to||canon(to)===canon(from);p=same?FOOD.inCity:FOOD.outCity;why=same?'בתוך העיר':'לעיר אחרת'}}
+  else{Q.pk={s:+qv('qS')||0,m:+qv('qM')||0,l:+qv('qL')||0};Q.kind=qv('qKind');p=parcelPrice(qv('qFromCity'),qv('qToCity'),Q.pk,Q.kind);why=p==null?(Q.pk.l?'חבילה גדולה: בתיאום':'יישוב מחוץ למחירון: בתיאום'):'לפי המחירון של האתר'}
+  $('qCalc').textContent=why;if(!Q.touched)$('qPrice').value=p==null?'':p;
+}
+function qCustomer(){var p=normPhone(qv('qPhone'));var h=$('qCust');if(p.length<9){h.textContent='';return}var c=custIndex()[p];
+  if(!c){h.textContent='✨ לקוח חדש';return}
+  h.innerHTML='✨ לקוח חוזר · '+c.n+' הזמנות'+(c.debt?' · <b style="color:var(--warn)">חוב '+money(c.debt)+'</b>':'');
+  var lo=c.lo;if(!$('qName').value)$('qName').value=c.name||'';
+  if(lo&&!$('qToCity').value){if(Q.type==='food'||isFood(lo)){$('qToCity').value=lo.to.city||'';$('qToStreet').value=lo.to.street||''}else{$('qFromCity').value=lo.from.city||'';$('qFromStreet').value=lo.from.street||'';$('qToCity').value=lo.to.city||'';$('qToStreet').value=lo.to.street||''}}
+  qCalc();
+}
+function smartParse(text){
+  var out={},ph=(text.match(/(?:\+?972[-\s]?|0)5\d[-\s]?\d{3}[-\s]?\d{4}/g)||[]).map(function(p){return p.replace(/[\s-]/g,'')});
+  if(ph[0])out.phone=ph[0];if(ph[1])out.rPhone=ph[1];
+  var found=[];Object.keys(P.CITIES).concat(Object.keys(P.ALIAS)).forEach(function(c){var i=text.indexOf(c);if(i>=0)found.push([i,canon(c)||c])});
+  found.sort(function(a,b){return a[0]-b[0]});var uniq=[];found.forEach(function(f){if(uniq.indexOf(f[1])<0)uniq.push(f[1])});
+  if(uniq.length>=2){out.fromCity=uniq[0];out.toCity=uniq[uniq.length-1]}else if(uniq[0])out.toCity=uniq[0];
+  var clean=text;rests().forEach(function(r){if(r.name)clean=clean.split(r.name).join(' ')});
+  var st=[],re=/(?:לרחוב|ברחוב|רחוב|רח['׳]|שד['׳]|שדרות|כתובת:?|ל|ב)?\s*((?:[א-ת"'׳]+\s){0,2}[א-ת"'׳]{2,}\s\d{1,4}[א-ת]?)(?=[\s,.\n]|$)/g,mm;
+  var STOP=/^(?:עד|כ|בעוד|תוך|יש|לגבות|סה"?כ|קומה|דירה|כניסה|בית|שעה|בשעה|אחרי|לפני)$/;
+  while((mm=re.exec(clean))){var w=mm[1].split(/\s+/),num=w.pop();
+    while(w.length&&(STOP.test(w[0])||/^(?:ל|ב)?(?:רחוב|משלוח|מ|אל|את|של|רוצה|צריך|צריכה|אני|זה|היי|שלום)$/.test(w[0])))w.shift();
+    w=w.map(function(x){return x.replace(/^(?:לרחוב|ברחוב)$/,'')}).filter(Boolean);
+    var cut=w.reduce(function(i,x,j){return (canon(x)||canon(x.replace(/^[לבמ]/,''))||/^(?:ל|ב)?(?:רחוב|רח['׳]|כתובת:?)$/.test(x))?j+1:i},0);w=w.slice(cut);
+    if(!w.length||STOP.test(w[w.length-1])||/^\s*(?:ש"ח|שח|שקל|₪|דק|ק"ג|קג|חבילות|חבילה|קרטונים|ארגזים|שעות)/.test(clean.slice(mm.index+mm[0].length)))continue;
+    var cand=w.join(' ').replace(/^ל(?=[א-ת]{3})/,'');if(Object.keys(P.CITIES).indexOf(cand)>=0)continue;st.push(cand+' '+num)}
+  if(st.length>=2){out.fromStreet=st[0];out.toStreet=st[st.length-1]}else if(st[0])out.toStreet=st[0];
+  var NSTOP=/^(?:רוצה|צריך|צריכה|מבקש|מבקשת|רוצים|צריכים|מזמין|מזמינה|פה|כאן|משלוח|להזמין|שולח|שולחת)$/;
+  var nm=text.match(/(?:שם[:\s]+|קוראים לי\s+|שמי\s+|זה\s+|זאת\s+|אני\s+|מדבר\s+|מדברת\s+)([א-ת]{2,}(?:\s[א-ת]{2,})?)/);
+  if(nm){var nw=nm[1].split(' ');if(!NSTOP.test(nw[0])){if(nw[1]&&NSTOP.test(nw[1]))nw=[nw[0]];out.name=nw.join(' ')}}
+  var cash=text.match(/(\d{2,4})\s*(?:₪|ש"ח|שח|שקל)/);if(cash)out.collect=+cash[1];
+  var fl=text.match(/קומה\s*(\d+)/);if(fl)out.notes='קומה '+fl[1];
+  var pk=text.match(/(\d+)\s*(?:חבילות|קרטונים|ארגזים)/);if(pk)out.pkS=+pk[1];
+  if(/דחוף|עכשיו|מיידי/.test(text))out.kind='ספיישל / שליחות מיידית';else if(/היום/.test(text))out.kind='מהיום להיום';
+  rests().forEach(function(r,i){if(r.name&&text.indexOf(r.name)>=0)out.rest=i});
+  if(/אוכל|פיצה|שווארמה|המבורגר|סושי|מסעדה|מנה|מנות/.test(text)||out.rest!=null)out.food=true;
+  return out;
+}
+function qSubmit(){
+  var food=Q.type==='food',r=food?rests()[qv('qRest')]:null;
+  var fromCity=r?r.city:qv('qFromCity'),fromStreet=r?r.street:qv('qFromStreet');
+  var phone=qv('qPhone'),name=qv('qName'),toCity=qv('qToCity'),toStreet=qv('qToStreet');
+  var e='';if(!name)e='חסר שם';else if(normPhone(phone).length<9)e='טלפון לא תקין';else if(!toCity||!toStreet)e='חסרה כתובת מסירה';else if(!fromCity||!fromStreet)e='חסרה כתובת איסוף (או בחרו מסעדה)';
+  if(e){$('qErr').textContent=e;return}
+  var price=$('qPrice').value===''?'':+$('qPrice').value;
+  var flags=[].slice.call(document.querySelectorAll('[data-flag]:checked')).map(function(x){return FLAGS.filter(function(f){return f[0]===x.getAttribute('data-flag')})[0][1]});
+  var collect=food?+qv('qCollect')||0:0,prep=food?+qv('qPrep')||0:0;
+  var notes=[];if(food)notes.push('🍔 אוכל'+(r?' · מסעדה: '+r.name:''));if(qv('qNotes'))notes.push('הערות: '+qv('qNotes'));if(flags.length)notes.push(flags.join(' '));if(collect)notes.push('לגבות מהלקוח: '+collect+'₪');
+  var snd=food?(r?r.name+' · '+(r.phone||''):name+' · '+phone):name+' · '+phone,rcv=food?name+' · '+phone:(qv('qRName')||name)+' · '+(qv('qRPhone')||phone);
+  var body={fromCity:fromCity,toCity:toCity,fromStreet:fromStreet,toStreet:toStreet,fromFloor:'',fromApt:'',toFloor:'',toApt:'',name:name,phone:phone,receiver:rcv,sender:snd,payer:food?'receiver':'sender',
+    pkgs:food?{s:1,m:0,l:0}:Q.pk,kind:food?'ספיישל / שליחות מיידית':Q.kind,payMethod:'pending',details:notes.concat(['מוסר: '+snd,'מקבל: '+rcv]).join(' | ').slice(0,400),src:food?'smart-food':'smart-phone'};
+  var meta=food?'🍔 אוכל'+(r?' | מסעדה: '+r.name:'')+(collect?' | גבייה: '+collect:'')+(prep?' | הכנה: '+prep:''):'📞 הזמנה טלפונית';
+  $('qSave').disabled=true;$('qErr').textContent='';
+  publicPost('create',body).then(function(j){
+    return load().then(function(){var o=D.orders.filter(function(x){return x.id===j.id})[0];if(!o)return j;
+      return update(o,{adminNote:meta,total:price===''?(o.price&&o.price.total!=null?o.price.total:''):price}).then(function(){return j})});
+  }).then(function(j){closeModal();toast('✓ נוצרה הזמנה '+j.id);load();
+    var link=j.trackUrl||(location.origin+'/app.html#/track/'+j.id+'.'+j.token);
+    $('sheet').innerHTML='<button class="x" data-close>✕</button><h2>✓ ההזמנה נוצרה · '+esc(j.id)+'</h2><p class="muted">שלחו ללקוח את קישור המעקב החי:</p><div class="acts"><a class="btn wa block" target="_blank" rel="noopener" href="https://wa.me/'+waNum(phone)+'?text='+encodeURIComponent('שלום '+name+', כאן לירון משלוחים '+(food?'🍔':'📦')+'\nההזמנה התקבלה ✓\nמספר: '+j.id+(price!==''?'\nמחיר המשלוח: '+price+'₪':'')+(collect?'\nלתשלום לשליח במזומן: '+collect+'₪':'')+'\nמעקב חי אחרי השליח: '+link)+'">💬 שליחת קישור מעקב ללקוח</a></div>';$('modal').classList.add('on');
+  }).catch(function(e){$('qErr').textContent=e.message||'לא נוצר. נסו שוב';$('qSave').disabled=false});
+}
+
+/* ============ אירועים ============ */
+function closeModal(){$('modal').classList.remove('on');Q=null}
+$('modal').addEventListener('click',function(e){if(e.target.id==='modal')closeModal()});
+document.addEventListener('input',function(e){var id=e.target.id;
+  if(!Q)return;if(id==='qPrice'){Q.touched=true;return}
+  if(['qFromCity','qToCity','qS','qM','qL'].indexOf(id)>=0)qCalc();
+  if(id==='qPhone'&&normPhone(e.target.value).length>=10)qCustomer();
+});
+document.addEventListener('change',function(e){var t=e.target;
+  if(t.id==='qRest'||t.id==='qKind'){if(t.id==='qRest'){var r=rests()[t.value];$('qFromBox').hidden=!!r;if(r&&r.prep)$('qPrep').value=r.prep}Q.touched=false;qCalc()}
+  if(t.id==='qPhone')qCustomer();
+  var a=t.getAttribute('data-asg');if(a&&t.value){var o=D.orders.filter(function(x){return x.id===a})[0];if(o)assign(o,t.value)}
+});
+document.addEventListener('click',function(e){var t=e.target,c;
+  if(t.closest('[data-close]'))return closeModal();
+  if((c=t.closest('[data-qt]'))){if(Q&&c.getAttribute('data-qt')!==Q.type){var keep={phone:qv('qPhone'),name:qv('qName'),toCity:qv('qToCity'),toStreet:qv('qToStreet')};openQuick(c.getAttribute('data-qt'),keep)}return}
+  if((c=t.closest('[data-quick]'))){var ri=c.getAttribute('data-rest');openQuick(c.getAttribute('data-quick'),ri!=null?{rest:+ri}:{});return}
+  if(t.id==='qParse'){var r=smartParse($('qPaste').value);if(r.food&&Q.type!=='food'){var txt=$('qPaste').value;openQuick('food',{});$('qPaste').value=txt}
+    var set=function(id,v){if(v!=null&&v!==''&&$(id)){$(id).value=v;n++}},n=0;
+    set('qPhone',r.phone);set('qName',r.name);set('qToCity',r.toCity);set('qToStreet',r.toStreet);set('qNotes',r.notes);
+    if(Q.type==='food'){set('qCollect',r.collect);if(r.rest!=null){$('qRest').value=r.rest;$('qFromBox').hidden=true;n++}else{set('qFromCity',r.fromCity);set('qFromStreet',r.fromStreet)}}
+    else{set('qFromCity',r.fromCity);set('qFromStreet',r.fromStreet);set('qRPhone',r.rPhone);set('qS',r.pkS);if(r.kind){$('qKind').value=r.kind;n++}}
+    Q.touched=false;qCalc();qCustomer();$('qPHint').textContent=n?'✓ מולאו '+n+' שדות. בדקו לפני יצירה':'לא זוהו פרטים. מלאו ידנית';return}
+  if(t.id==='qSave')return qSubmit();
+  if((c=t.closest('[data-asgone]'))){var o=D.orders.filter(function(x){return x.id===c.getAttribute('data-asgone')})[0];c.disabled=true;if(o)assign(o,c.getAttribute('data-cid'));return}
+  if(t.id==='autoAll'){var w=D.orders.filter(function(o){return o.status==='new'}).sort(function(a,b){return a.createdAt-b.createdAt});if(!w.length)return;t.disabled=true;var n2=0;
+    w.reduce(function(p,o){return p.then(function(){var s=suggest(o);if(!s)return;return update(o,{assignedTo:s.c.id,status:'assigned'}).then(function(){n2++})})},Promise.resolve()).then(function(){toast('✨ שובצו '+n2+' הזמנות');load()}).catch(function(e){toast(e.message||'חלק לא נשמרו');load()});return}
+  if((c=t.closest('[data-st]'))){var o2=D.orders.filter(function(x){return x.id===c.getAttribute('data-st')})[0];var to=c.getAttribute('data-to');c.disabled=true;
+    var ch={status:to};if(to==='delivered'&&o2&&isFood(o2)&&foodMeta(o2).collect)ch.method='cash';
+    update(o2,ch).then(function(){toast(ST[to]+' · '+o2.id);render()}).catch(function(err){c.disabled=false;toast(err.message||'לא נשמר')});return}
+  if((c=t.closest('[data-go]'))){if(c.getAttribute('data-cf'))custF=c.getAttribute('data-cf');go(c.getAttribute('data-go'));return}
+  if((c=t.closest('[data-scroll]'))){$(c.getAttribute('data-scroll')).scrollIntoView({behavior:'smooth',block:'start'});return}
+  if((c=t.closest('[data-ff]'))){foodF=c.getAttribute('data-ff');renderFood();return}
+  if((c=t.closest('[data-cf]'))){custF=c.getAttribute('data-cf');renderCust();return}
+  if((c=t.closest('[data-rr]'))){repR=c.getAttribute('data-rr');renderRep();return}
+  if((c=t.closest('[data-route]'))){var cc=courierById(c.getAttribute('data-route'));var txt2=routeText(cc,routeFor(cc));$('sheet').innerHTML='<button class="x" data-close>✕</button><h2>מסלול ל'+esc(cc.name)+'</h2><textarea class="copybox" id="rtBox" readonly>'+esc(txt2)+'</textarea><button class="btn primary block" id="rtCopy" style="margin-top:8px">העתקה</button>';$('modal').classList.add('on');return}
+  if(t.id==='rtCopy'){var bx=$('rtBox');(navigator.clipboard?navigator.clipboard.writeText(bx.value):Promise.reject()).then(function(){toast('הועתק')}).catch(function(){bx.select();toast('סמנו והעתיקו')});return}
+  if((c=t.closest('[data-again]'))){var lo=D.orders.filter(function(x){return x.id===c.getAttribute('data-again')})[0];if(!lo)return;var f=isFood(lo),fm=foodMeta(lo),ri2=-1;rests().forEach(function(r,i){if(r.name===fm.rest)ri2=i});
+    var rp=String(lo.customer.receiver||'').split(' · ');
+    openQuick(f?'food':'parcel',{phone:lo.customer.phone,name:lo.customer.name,fromCity:lo.from.city,fromStreet:lo.from.street,toCity:lo.to.city,toStreet:lo.to.street,rName:rp[0]||'',rPhone:rp[1]||'',kind:lo.pkg&&lo.pkg.kind,rest:ri2>=0?ri2:undefined});return}
+  if((c=t.closest('[data-editrest]')))return editRest(+c.getAttribute('data-editrest'));
+  if((c=t.closest('[data-delrest]'))){if(c.dataset.armed){var a2=rests();a2.splice(+c.getAttribute('data-delrest'),1);saveRests(a2);renderFood();toast('נמחקה')}else{c.dataset.armed='1';c.textContent='בטוח?'}return}
+  if(t.id==='rSave'){var i3=+t.getAttribute('data-i'),rr={name:qv('rName'),phone:qv('rPhone'),city:canon(qv('rCity'))||qv('rCity'),street:qv('rStreet'),prep:+qv('rPrep')||0,fee:+qv('rFee')||0};
+    if(!rr.name||!rr.city||!rr.street){$('rErr').textContent='חסרים שם, עיר או כתובת';return}var a3=rests();if(i3>=0)a3[i3]=rr;else a3.push(rr);saveRests(a3);closeModal();foodF='rest';renderFood();toast('נשמר ✓');return}
+  if(t.id==='saveFood'){document.querySelectorAll('[data-fs]').forEach(function(i){FOOD[i.getAttribute('data-fs')]=+i.value||0});LS.set('smartFood',FOOD);toast('ההגדרות נשמרו');render();return}
+  if((c=t.closest('[data-stmt]'))){var r4=rests()[+c.getAttribute('data-stmt')],m0=new Date(new Date().getFullYear(),new Date().getMonth(),1).getTime();
+    var arr=D.orders.filter(function(o){return isFood(o)&&foodMeta(o).rest===r4.name&&o.status!=='cancelled'&&o.createdAt>=m0}).sort(function(a,b){return a.createdAt-b.createdAt});
+    var tot=arr.reduce(function(s,o){return s+priceOf(o)},0),open=arr.filter(function(o){return !(o.pay&&o.pay.paid)}).reduce(function(s,o){return s+priceOf(o)},0);
+    var st='לירון משלוחים 🍔 חשבון '+new Date().toLocaleDateString('he-IL',{month:'long',year:'numeric'})+'\nלכבוד: '+r4.name+'\n\n'+arr.map(function(o){return new Date(o.createdAt).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'})+' · '+o.id+' · '+(o.to.city||'')+' · '+money(priceOf(o))+(o.pay&&o.pay.paid?' ✓':'')}).join('\n')+'\n\nסה"כ משלוחים: '+arr.length+'\nסה"כ: '+money(tot)+'\nיתרה לתשלום: '+money(open)+'\n\nתודה! 052-5068475';
+    $('sheet').innerHTML='<button class="x" data-close>✕</button><h2>📄 חשבון חודשי · '+esc(r4.name)+'</h2><textarea class="copybox" id="rtBox" readonly>'+esc(st)+'</textarea><div class="acts">'+(r4.phone?'<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+waNum(r4.phone)+'?text='+encodeURIComponent(st)+'">💬 שליחה</a>':'')+'<button class="btn primary" id="rtCopy">העתקה</button></div>';$('modal').classList.add('on');return}
+});
+$('custQ').addEventListener('input',renderCust);
+function editRest(i){var r=i>=0?rests()[i]:{name:'',phone:'',city:'אשקלון',street:'',prep:FOOD.prep,fee:''};Q=null;
+  $('sheet').innerHTML='<button class="x" data-close>✕</button><h2>'+(i>=0?'עריכת מסעדה':'מסעדה חדשה')+'</h2>'+
+  '<div class="g2"><div class="field"><label>שם</label><input id="rName" value="'+esc(r.name)+'"></div><div class="field"><label>טלפון</label><input id="rPhone" type="tel" dir="ltr" value="'+esc(r.phone)+'"></div><div class="field"><label>עיר</label><input id="rCity" list="rCities" value="'+esc(r.city)+'"></div><div class="field"><label>כתובת</label><input id="rStreet" value="'+esc(r.street)+'"></div><div class="field"><label>זמן הכנה (דק\')</label><input id="rPrep" type="number" value="'+esc(r.prep)+'"></div><div class="field"><label>מחיר משלוח קבוע ₪ (לא חובה)</label><input id="rFee" type="number" value="'+esc(r.fee||'')+'"></div></div>'+
+  '<p class="err" id="rErr"></p><button class="btn primary block" id="rSave" data-i="'+i+'">שמירה</button><datalist id="rCities">'+Object.keys(P.CITIES).map(function(c){return '<option value="'+esc(c)+'">'}).join('')+'</datalist>';$('modal').classList.add('on');}
+
+/* ============ התחלה ============ */
+var timer=null;
+function start(){clearInterval(timer);var h=location.hash.replace('#','');go(['board','food','routes','cust','rep'].indexOf(h)>=0?h:'board');load();timer=setInterval(function(){if(!document.hidden&&!$('modal').classList.contains('on'))load()},20000)}
+if(DEMO||LS.get('dtok',null))start();else showLogin();
+
+/* ============ מצב הדגמה (?demo=1) — נתונים מדומים, בלי שרת ============ */
+function demoApi(q,body){
+  if(!demoApi.db){var n=Date.now(),m=60000,h=60*m;
+    var C=[{id:'c1',name:'לירון',phone:'0525068475',active:true,main:true,loc:{lat:31.668,lng:34.574,at:n-m}},{id:'c2',name:'אבי',phone:'0501234567',active:true,loc:{lat:31.80,lng:34.65,at:n-2*m}},{id:'c3',name:'מוטי',phone:'0549876543',active:true}];
+    var mk=function(id,st,ago,fc,fs,tc,ts,name,ph,tot,paid,asg,note,fl,tl){var o={id:id,token:'0123456789abcdef0123',status:st,createdAt:n-ago,from:{city:fc,street:fs,lat:fl&&fl[0],lng:fl&&fl[1]},to:{city:tc,street:ts,lat:tl&&tl[0],lng:tl&&tl[1]},customer:{name:name,phone:ph,receiver:''},pkg:{qty:1,size:'קטנה',kind:'מהיום למחר'},price:{total:tot,text:tot+'₪'},pay:{paid:paid,method:paid?'bit':'pending'},assignedTo:asg||'',courierName:asg?C.filter(function(c){return c.id===asg})[0].name:'',adminNote:note||'',notes:'',schedule:{},history:[{s:'new',at:n-ago}]};
+      if(st!=='new')o.history.push({s:'assigned',at:n-ago+5*m});if(st==='delivered')o.history.push({s:'delivered',at:n-ago+40*m});return o};
+    demoApi.db={orders:[
+      mk('L1001','new',22*m,'אשקלון','הרצל 12','אשדוד','הבנים 4','דנה כהן','0501112233',50,false,'','',[31.669,34.571],[31.80,34.65]),
+      mk('L1002','new',4*m,'אשקלון','בן גוריון 3','אשקלון','אצ"ל 8','יוסי לוי','0549998877',25,false,'','🍔 אוכל | מסעדה: פיצה רומא | גבייה: 120 | הכנה: 20',[31.67,34.58],[31.66,34.56]),
+      mk('L1003','picked',35*m,'אשקלון','הנשיאים 5','יבנה','דואני 10','משה ביטון','0523334455',65,true,'c2','',[31.67,34.57],[31.877,34.739]),
+      mk('L1004','assigned',51*m,'אשקלון','אלי כהן 2','אשקלון','רוטשילד 9','רונית','0507778899',20,false,'c1','🍔 אוכל | מסעדה: שווארמה הדר | גבייה: 85',[31.665,34.57],[31.672,34.565]),
+      mk('L1005','delivered',3*h,'אשקלון','הרצל 12','גדרה','הרצל 1','דנה כהן','0501112233',65,false,'c2','',null,null),
+      mk('L1006','delivered',26*h,'אשקלון','הרצל 12','אשדוד','הבנים 4','דנה כהן','0501112233',50,true,'c1','',null,null),
+      mk('L1007','delivered',5*h,'אשקלון','בן גוריון 3','ברכיה','הדקל 3','שירן','0581112222',25,true,'c1','🍔 אוכל | מסעדה: פיצה רומא',null,null),
+      mk('L1008','delivered',40*24*h,'אשקלון','ההגנה 4','רחובות','הרצל 20','עמית','0535556666',80,true,'c2','',null,null),
+      mk('L1009','delivered',45*24*h,'אשקלון','ההגנה 4','רחובות','הרצל 20','עמית','0535556666',80,true,'c2','',null,null)
+    ],couriers:C,sys:{}};
+    if(!rests().length)saveRests([{name:'פיצה רומא',phone:'086711111',city:'אשקלון',street:'בן גוריון 3',prep:20,fee:0},{name:'שווארמה הדר',phone:'086722222',city:'אשקלון',street:'אלי כהן 2',prep:15,fee:20}]);
+  }
+  var db=demoApi.db,a=(q.match(/a=([^&]+)/)||[])[1]||q;
+  return new Promise(function(res,rej){setTimeout(function(){
+    if(a==='admin-list')return res(JSON.parse(JSON.stringify(db)));
+    if(a==='admin-update'){var o=db.orders.filter(function(x){return x.id===body.id})[0];if(!o)return rej(new Error('לא נמצא'));
+      if(body.status&&body.status!==o.status){o.status=body.status;o.history.push({s:body.status,at:Date.now()})}
+      if(body.assignedTo!==undefined){o.assignedTo=body.assignedTo;var c=db.couriers.filter(function(x){return x.id===body.assignedTo})[0];o.courierName=c?c.name:''}
+      o.pay.paid=!!body.paid;o.pay.method=body.method;if(body.total!==''&&body.total!=null)o.price={total:+body.total,text:body.total+'₪'};o.adminNote=body.adminNote;return res({order:JSON.parse(JSON.stringify(o))})}
+    if(a==='create'){var id='L'+(1100+db.orders.length);db.orders.unshift({id:id,token:'0123456789abcdef0123',status:'new',createdAt:Date.now(),from:{city:body.fromCity,street:body.fromStreet},to:{city:body.toCity,street:body.toStreet},customer:{name:body.name,phone:body.phone,receiver:body.receiver},pkg:{kind:body.kind},price:{total:null,text:'בתיאום'},pay:{paid:false,method:'pending'},assignedTo:'',notes:body.details,adminNote:'',schedule:{},history:[{s:'new',at:Date.now()}]});return res({id:id,token:'0123456789abcdef0123'})}
+    if(a==='admin-login')return res({token:'demo',role:'dev',name:'הדגמה'});
+    res({});
+  },120)});
+}
+})();
+</script>
+</body>
+</html>
