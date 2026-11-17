@@ -22,7 +22,23 @@ async function markPaid(ref, t) {
     }
     o.history = o.history || []; o.history.push({ s: o.status, at: Date.now(), by: 'cardcom', byName: (o.pay.paid ? 'תשלום אשראי ' : 'תשלום חלקי ') + amount + '₪' });
     await s.setJSON('o:' + ref, o);
+    if (o.pay.paid) await notifyPaid(o).catch(e => console.error('notify', e));
   } catch (e) { console.error('markPaid', e); }
+}
+
+// הודעה למנהל בוואטסאפ על הזמנה ששולמה, עם סיכום העסקה ופרטי ההפצה המלאים.
+// פעיל רק כשמוגדר ב-Netlify CALLMEBOT_KEY או TWILIO_ACCOUNT_SID+TWILIO_AUTH_TOKEN+TWILIO_WA_FROM.
+function orderSummary(o) {
+  const p = o.price || {}, adr = x => [x.street, x.city].filter(Boolean).join(', ') + (x.floor ? ' · קומה ' + x.floor : '') + (x.apt ? ' · דירה ' + x.apt : '');
+  return ['✅ הזמנה חדשה שולמה באשראי', 'מספר הזמנה: ' + o.id, o.custId ? 'כרטיס לקוח: ' + o.custId + (o.customer.biz ? ' (' + o.customer.biz + ')' : '') : '',
+    'מזמין: ' + o.customer.name + ' · ' + o.customer.phone, '', '📦 ' + (o.pkg.mix || o.pkg.qty + ' × ' + o.pkg.size) + ' · ' + o.pkg.kind,
+    '📍 איסוף: ' + adr(o.from), '🏁 מסירה: ' + adr(o.to), o.customer.receiver ? '👤 מקבל: ' + o.customer.receiver : '', o.notes ? '📝 ' + o.notes : '', '',
+    '💰 לפני מע"מ: ' + (p.net ?? '-') + '₪ · מע"מ ' + (p.vatRate ?? 18) + '%: ' + (p.vat ?? '-') + '₪', '💳 שולם: ' + o.pay.amount + '₪ · עסקה ' + (o.pay.deal ?? '')].filter((x, i, a) => x !== '' || a[i - 1] !== '').join('\n');
+}
+async function notifyPaid(o) {
+  const to = String(process.env.WHATSAPP_TO || process.env.COURIER_PHONE || '0525068475').replace(/\D/g, '').replace(/^972/, '0'), text = orderSummary(o);
+  if (process.env.CALLMEBOT_KEY) await fetch('https://api.callmebot.com/whatsapp.php?phone=972' + to.slice(1) + '&text=' + encodeURIComponent(text) + '&apikey=' + encodeURIComponent(process.env.CALLMEBOT_KEY));
+  else if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WA_FROM) await fetch('https://api.twilio.com/2010-04-01/Accounts/' + process.env.TWILIO_ACCOUNT_SID + '/Messages.json', { method: 'POST', headers: { authorization: 'Basic ' + btoa(process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN), 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ From: 'whatsapp:' + process.env.TWILIO_WA_FROM, To: 'whatsapp:+972' + to.slice(1), Body: text }) });
 }
 const json = (code, body) => new Response(JSON.stringify(body), { status: code, headers: { 'content-type': 'application/json; charset=utf-8' } });
 

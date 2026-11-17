@@ -113,8 +113,8 @@ export default async (req) => {
     ProductName: desc,
     ISOCoinId: 1,
     Language: 'he',
-    SuccessRedirectUrl: `${site}/thanks.html?ref=${ref}`,
-    FailedRedirectUrl: o.back === 'order' ? `${site}/order.html?pay=failed` : `${site}/index.html?pay=failed#order`,
+    SuccessRedirectUrl: `${site}/thanks.html?ref=${ref}${o.back === 'app' ? '&back=app' : ''}`,
+    FailedRedirectUrl: o.back === 'app' ? `${site}/app.html?pay=failed#/card` : o.back === 'order' ? `${site}/order.html?pay=failed` : `${site}/index.html?pay=failed#order`,
     WebHookUrl: `${site}/.netlify/functions/verify`,
     AdvancedDefinition: {
       MinNumOfPayments: 1,

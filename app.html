@@ -125,6 +125,29 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
 .okban{display:flex;gap:10px;align-items:center;margin-top:12px;padding:12px 14px;border-radius:14px;background:#123322;border:1px solid #2ecc7155;color:#bff5d4;font-weight:700;font-size:.92rem}
 .btn.wa{background:#25d366;color:#04170b;box-shadow:0 0 22px #25d36655}
 .cust-src{font-size:.72rem}.cust-dup{color:#ffb347;font-weight:800}
+
+.ctabs{position:sticky;top:64px;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:14px 0 4px;padding:4px;border-radius:16px;background:#0b0d12f2;border:1px solid var(--line);backdrop-filter:blur(8px)}
+.ctabs button{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:54px;border:0;border-radius:12px;background:none;color:#cfd3da;font:800 .8rem inherit;font-family:inherit;cursor:pointer}
+.ctabs button[aria-selected="true"]{background:var(--gold);color:#0a0a0a;box-shadow:0 0 18px #ffd12c66}
+.card.ai{border-color:#7cc8ff66;background:linear-gradient(160deg,#13202e,#12161c)}
+.card.ai .badge{background:#7cc8ff22;color:#9fd6ff}
+.pkr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #ffffff12}.pkr small{display:block;color:var(--muted);font-size:.78rem}
+.pkr.has b{color:var(--gold)}
+.qn{display:flex;align-items:center;gap:10px}.qn button{width:42px;height:42px;border-radius:12px;border:1px solid #ffffff30;background:#0b0d12;color:#fff;font-size:1.3rem;cursor:pointer}.qn .p{background:var(--gold);color:#0a0a0a;border:0}
+.qn output{min-width:22px;text-align:center;font-weight:900;font-size:1.1rem}
+.kinds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.kinds button{display:flex;flex-direction:column;gap:2px;padding:10px 6px;border-radius:12px;border:1.5px solid var(--line);background:#0b0d12;color:#fff;font-family:inherit;cursor:pointer}
+.kinds button small{color:var(--muted);font-size:.72rem}.kinds button[aria-checked="true"]{border-color:var(--gold);background:#2a2208;box-shadow:0 0 14px #ffd12c44}
+.qtot{font-size:1.9rem;font-weight:900;color:var(--gold);text-shadow:0 0 14px #ffd12c66;direction:ltr}
+.qlist{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}.qlist li{display:flex;justify-content:space-between;gap:10px;font-size:.92rem;color:#d9dce1}
+.qlist li.sub{border-top:1px dashed #ffffff26;padding-top:8px;color:#c9ccd2}.qlist li.vat{color:var(--gold);font-weight:800}
+.vatpill{margin:10px 0 0;padding:8px 12px;border-radius:10px;background:#ffd12c12;border:1px solid #ffd12c40;color:#e9e1c0;font-size:.88rem}.vatpill b{color:var(--gold)}
+.chk a{color:var(--gold)}
+.paybtn{margin-top:12px;min-height:58px;font-size:1.1rem;box-shadow:0 0 26px #ffd12c55}.paybtn:disabled{opacity:.45;box-shadow:none}
+.cerr{margin-top:12px;padding:12px 14px;border-radius:14px;background:#3a1414;border:1px solid #ff6b6b66;color:#ffc2c2;font-weight:700;font-size:.9rem}
+.oc{border-top:1px solid var(--line);padding:12px 0 2px;margin-top:10px}.oc:first-child{border:0;margin:0;padding-top:4px}
+.oc .acts .btn{min-height:42px;font-size:.85rem}
+.paid{background:#1f5a3a!important;color:#bff5d4!important}.unpaid{background:#5a1f1f!important;color:#ffc2c2!important}
 </style>
 </head>
 <body>
@@ -195,12 +218,90 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
     <h1>כרטיס הלקוח שלי</h1>
     <div id="cOk" class="okban" hidden>✓ <span id="cOkT">כרטיס הלקוח נפתח בהצלחה!</span></div>
     <div class="mcard" id="mCard" aria-live="polite"></div>
-    <div class="card"><div class="kv" id="cKv"></div>
-      <a class="btn wa block" id="cWa" target="_blank" rel="noopener" style="margin-top:14px">💬 שליחת הודעת פתיחה לוואטסאפ העסקי</a>
-      <a class="btn primary block" id="cOrder" href="/order.html" style="margin-top:10px">🚚 הזמנת משלוח עם הפרטים שלי</a>
-      <a class="btn ghost block" href="#/my" style="margin-top:10px">📍 המשלוחים שלי</a>
-      <p class="err" id="cErr" role="alert"></p>
-      <button type="button" class="btn ghost block" id="cForget" style="margin-top:14px;min-height:40px;font-size:.85rem;opacity:.75">ניתוק הכרטיס מהטלפון הזה</button>
+    <div id="cPayErr" class="cerr" hidden>התשלום לא הושלם. ההזמנה נשמרה, אפשר לנסות שוב מ"ההזמנות שלי" או לשלם ב-bit.</div>
+    <div class="ctabs" role="tablist" id="cTabs">
+      <button type="button" role="tab" data-t="new" aria-selected="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>הזמנה</button>
+      <button type="button" role="tab" data-t="orders" aria-selected="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>ההזמנות שלי</button>
+      <button type="button" role="tab" data-t="terms" aria-selected="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>תקנון</button>
+      <button type="button" role="tab" data-t="me" aria-selected="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>פרטים</button>
+    </div>
+
+    <!-- הזמנה מתוך הכרטיס -->
+    <div class="cpane" data-p="new">
+      <div class="card ai">
+        <div class="ord-h"><h2 style="margin:0">✨ הזמנה חכמה</h2><span class="badge" id="aiBadge">מילוי אוטומטי</span></div>
+        <p class="muted small" style="margin:6px 0 0">כתבו במילים שלכם מה שולחים, ואנחנו נמלא את הטופס. לדוגמה: "2 חבילות קטנות מאשקלון לרחובות, הרצל 10, למשה 0521234567, היום"</p>
+        <div class="field"><textarea id="aiTxt" maxlength="600" placeholder="מה שולחים, מאיפה, לאן ולמי?"></textarea></div>
+        <button type="button" class="btn ghost block" id="aiGo" style="margin-top:10px">✨ מילוי חכם של הטופס</button>
+        <p class="muted small" id="aiMsg" style="margin:8px 0 0"></p>
+      </div>
+      <div class="card">
+        <h2>📍 איסוף</h2>
+        <div class="dedit"><label>יישוב<input id="oFromCity" list="oCities" autocomplete="off"></label><label>רחוב ומספר<input id="oFromStreet" maxlength="80"></label></div>
+        <h2 style="margin-top:16px">🏁 מסירה</h2>
+        <div class="dedit"><label>יישוב<input id="oToCity" list="oCities" autocomplete="off"></label><label>רחוב ומספר<input id="oToStreet" maxlength="80"></label>
+          <label>שם המקבל<input id="oRName" maxlength="60"></label><label>טלפון המקבל<input id="oRPhone" type="tel" inputmode="tel" maxlength="20"></label></div>
+        <datalist id="oCities"></datalist>
+        <h2 style="margin-top:16px">📦 חבילות</h2>
+        <div class="pkr" data-k="s"><span><b>קטנה</b><small>עד 5 ק"ג</small></span><div class="qn"><button type="button" class="m" aria-label="פחות">−</button><output>0</output><button type="button" class="p" aria-label="עוד">+</button></div></div>
+        <div class="pkr" data-k="m"><span><b>בינונית</b><small>עד 15 ק"ג</small></span><div class="qn"><button type="button" class="m" aria-label="פחות">−</button><output>0</output><button type="button" class="p" aria-label="עוד">+</button></div></div>
+        <div class="pkr" data-k="l"><span><b>גדולה</b><small>מעל 15 ק"ג · מחיר בתיאום</small></span><div class="qn"><button type="button" class="m" aria-label="פחות">−</button><output>0</output><button type="button" class="p" aria-label="עוד">+</button></div></div>
+        <h2 style="margin-top:16px">⏱ סוג המשלוח</h2>
+        <div class="kinds" id="oKinds" role="radiogroup" aria-label="סוג המשלוח">
+          <button type="button" role="radio" aria-checked="true" data-v="מהיום למחר"><b>מהיום למחר</b><small>מחיר רגיל</small></button>
+          <button type="button" role="radio" aria-checked="false" data-v="מהיום להיום"><b>מהיום להיום</b><small>עד 3 שעות · <bdi dir="ltr">+35.40₪</bdi></small></button>
+          <button type="button" role="radio" aria-checked="false" data-v="ספיישל / שליחות מיידית"><b>מיידי</b><small><bdi dir="ltr">+59₪</bdi></small></button>
+        </div>
+        <div class="field"><label for="oNotes">הערות לשליח <span class="opt">(לא חובה)</span></label><textarea id="oNotes" maxlength="400" placeholder="קוד לבניין, קומה, שעות נוחות…"></textarea></div>
+      </div>
+      <div class="card gold qbox" aria-live="polite">
+        <div class="ord-h"><h2 style="margin:0">סיכום העסקה</h2><b class="qtot" id="qTot">—</b></div>
+        <ul class="qlist" id="qList"><li class="muted">בוחרים איסוף, מסירה וחבילות, והמחיר מחושב אוטומטית.</li></ul>
+        <p class="vatpill">🧾 המחיר כולל מע״מ <b>18%</b></p>
+        <label class="chk"><input type="checkbox" id="oTerms"><span>קראתי ואני מסכים/ה ל<a href="#" data-goto="terms">תקנון השירות ולתקנון הביטול</a></span></label>
+        <p class="err" id="oErr" role="alert"></p>
+        <button type="button" class="btn primary block paybtn" id="oPay" disabled>💳 תשלום באשראי</button>
+        <p class="muted small" style="text-align:center;margin:8px 0 0">תשלום מאובטח בקארדקום · עד 24 תשלומים. אחרי התשלום ההזמנה נשלחת ללירון עם כל הפרטים.</p>
+      </div>
+    </div>
+
+    <!-- ההזמנות שלי -->
+    <div class="cpane" data-p="orders" hidden><div class="card"><h2>ההזמנות שלי</h2><div id="cOrders"><p class="muted small">טוען…</p></div></div></div>
+
+    <!-- תקנון -->
+    <div class="cpane" data-p="terms" hidden>
+      <details class="help" open><summary>📜 תקנון השירות</summary><ol>
+        <li>לירון משלוחים מספקת שירות איסוף ומסירה של חבילות ומסמכים מאשקלון ועד ראשון לציון, רחובות, נס ציונה ואזור רמלה-לוד. יעדים אחרים בתיאום מראש.</li>
+        <li>המחיר נקבע לפי המרחק, כמות החבילות וגודלן וסוג המשלוח, לפי המחירון באתר. כל המחירים כוללים מע״מ 18%. המחיר הסופי מוצג לפני התשלום.</li>
+        <li>חבילה קטנה עד 5 ק"ג, בינונית עד 15 ק"ג. חבילה גדולה (מעל 15 ק"ג או מידות חריגות) במחיר מתואם.</li>
+        <li>הלקוח אחראי לאריזה תקינה ולמסירת פרטים נכונים של כתובת האיסוף, כתובת המסירה והמקבל. פריט שביר או בעל ערך גבוה יש לציין מראש בהערות.</li>
+        <li>אסור לשלוח: חומרים מסוכנים או דליקים, נשק ותחמושת, סמים, כסף מזומן, בעלי חיים, וכל פריט שהעברתו אסורה על פי דין. לשליח מותר לסרב לאסוף פריט כזה.</li>
+        <li>מהיום למחר: איסוף היום ומסירה עד 24 שעות. מהיום להיום: מסירה תוך עד 3 שעות מהאיסוף. זמנים עשויים להשתנות בגלל עומסי תנועה, מזג אוויר או נסיבות שאינן בשליטתנו.</li>
+        <li>10 הדקות הראשונות של המתנה באיסוף או במסירה ללא תשלום. כל 10 דקות נוספות: <bdi dir="ltr">17.70₪</bdi>. שינוי כתובת אחרי יציאת השליח או עצירה נוספת: <bdi dir="ltr">29.50₪</bdi> (ובשינוי אזור, גם ההפרש בין האזורים).</li>
+        <li>התשלום מראש באשראי (עד 24 תשלומים) או ב-bit. התשלום באשראי מאובטח בקארדקום, ופרטי הכרטיס לא נשמרים אצלנו.</li>
+        <li>הפרטים בכרטיס הלקוח ובהזמנות נשמרים לצורך מתן השירות ויצירת קשר בלבד, ולא מועברים לגורם אחר מלבד השליח שמבצע את המשלוח.</li>
+        <li>לשאלות, שינויים ותלונות: וואטסאפ או טלפון <a href="tel:0525068475" dir="ltr">052-5068475</a>.</li>
+      </ol></details>
+      <details class="help" open><summary>↩️ תקנון ביטול והחזרים</summary><ul>
+        <li><b>לפני ששובץ שליח:</b> ביטול ללא תשלום, והחזר מלא.</li>
+        <li><b>אחרי שיבוץ, לפני שהשליח יצא:</b> דמי ביטול <bdi dir="ltr">23.60₪</bdi>.</li>
+        <li><b>השליח כבר בדרך לאיסוף:</b> 50% ממחיר המשלוח.</li>
+        <li><b>אחרי שהחבילה נאספה:</b> 100% מהמחיר. החזרה לשולח בתוספת 50%.</li>
+        <li><b>מסירה שלא הצליחה</b> (הנמען לא זמין): מסירה חוזרת או החזרה לשולח, 50% מהמחיר.</li>
+        <li><b>המתנה מעל 60 דקות:</b> השליח ממשיך בדרכו, והמשלוח מתואם מחדש בתשלום 50% נסיעה חוזרת.</li>
+        <li>ביטול נעשה בוואטסאפ או בטלפון. החזר כספי, כשמגיע, מוחזר לאמצעי התשלום המקורי בתוך 14 ימי עסקים.</li>
+      </ul></details>
+      <p class="muted small" style="text-align:center">כל הסכומים כוללים מע״מ 18%.</p>
+    </div>
+
+    <!-- פרטים -->
+    <div class="cpane" data-p="me" hidden>
+      <div class="card"><div class="kv" id="cKv"></div>
+        <a class="btn wa block" id="cWa" target="_blank" rel="noopener" style="margin-top:14px">💬 שליחת הודעת פתיחה לוואטסאפ העסקי</a>
+        <a class="btn ghost block" id="cOrder" href="/order.html" style="margin-top:10px">🌐 טופס ההזמנה המלא באתר</a>
+        <p class="err" id="cErr" role="alert"></p>
+        <button type="button" class="btn ghost block" id="cForget" style="margin-top:14px;min-height:40px;font-size:.85rem;opacity:.75">ניתוק הכרטיס מהטלפון הזה</button>
+      </div>
     </div>
   </section>
 
@@ -419,6 +520,7 @@ function route(){
   if(parts[0]==='courier'){setMode('courier');if(!LS.get('ctok',null)){show('login');setTimeout(function(){$('pinIn').focus()},50);return;}show('courier');loadCourier();timers.push(setInterval(loadCourier,15000));return;}
   if(mode==='courier'&&parts[0]!=='help'&&parts[0]!=='dev'&&parts[0]!=='devlogin'&&parts[0]!=='devorder'){location.hash='#/courier';return;}
   if(parts[0]==='join'){if(myCard()){location.hash='#/card';return;}show('join');return;}
+  if(parts[0]==='c'&&parts[1]){var mm=parts[1].match(/^(C\d{3,7})\.([0-9a-f]{20})$/);if(mm){LS.set('myCard',{id:mm[1],token:mm[2]});joinTileUpd();}location.replace('#/card');return;}
   if(parts[0]==='card'){show('card');renderCard();return;}
   if(parts[0]==='my'){show('my');renderMy();return;}
   if(parts[0]==='help'){show('help');return;}
@@ -428,7 +530,7 @@ window.addEventListener('hashchange',route);
 
 
 /* ---------- כרטיס לקוח ---------- */
-var BIZ_WA='972525068475';
+var BIZ_WA='972525068475';var BIT='https://www.bitpay.co.il/app/me/2ED1CA70-A6BD-C40F-8D68-84DD3604E9C2D6CD';
 function myCard(){var c=LS.get('myCard',null);return c&&/^C\d{3,7}$/.test(c.id)&&c.token?c:null;}
 function joinTileUpd(){var c=myCard();if(!c)return;$('joinTile').href='#/card';$('joinT').textContent='כרטיס הלקוח שלי · '+c.id;$('joinS').textContent='הפרטים שלך, הזמנה מהירה והודעה ללירון';}
 var jType='private';
@@ -454,15 +556,95 @@ function drawCard(c){
 function renderCard(){var m=myCard();if(!m){location.hash='#/join';return;}
   var nw=LS.get('cardNew',null);$('cOk').hidden=!nw;if(nw){$('cOkT').textContent=nw==='auto'?'כרטיס הלקוח נפתח, ולירון קיבל הודעה בוואטסאפ!':'כרטיס הלקוח נפתח! לחצו על הכפתור הירוק כדי לשלוח ללירון הודעת פתיחה.';LS.del('cardNew');}
   $('cErr').textContent='';if(m.card)drawCard(m.card);
-  api('a=cust-me&id='+encodeURIComponent(m.id)+'&t='+encodeURIComponent(m.token)).then(function(j){m.card=j.card;LS.set('myCard',m);drawCard(j.card);})
+  $('cPayErr').hidden=!/pay=failed/.test(location.search);
+  api('a=cust-me&id='+encodeURIComponent(m.id)+'&t='+encodeURIComponent(m.token)).then(function(j){m.card=j.card;LS.set('myCard',m);drawCard(j.card);cuOrders=j.orders||[];aiOn=!!j.ai;$('aiBadge').textContent=aiOn?'מופעל ב-AI':'מילוי אוטומטי';if(j.cities&&!$('oCities').children.length){CITIES=j.cities;j.cities.slice().sort(function(a,b){return a.localeCompare(b,'he')}).forEach(function(c){var o=document.createElement('option');o.value=c;$('oCities').appendChild(o)})}prefill(j.card);renderOrders();})
   .catch(function(e){if(e.status===404){$('cErr').textContent='הכרטיס הזה כבר לא קיים במערכת. אפשר לפתוח כרטיס חדש.';LS.del('myCard');}});}
 $('cOrder').addEventListener('click',function(){var m=myCard();if(!m||!m.card)return;try{var x=JSON.parse(sessionStorage.getItem('lironOrderFields')||'{}');x.sName=m.card.name+(m.card.biz?' ('+m.card.biz+')':'');x.sPhone=m.card.phone;if(m.card.city&&!x.fromCity)x.fromCity=m.card.city;if(m.card.street&&!x.fromStreet)x.fromStreet=m.card.street;sessionStorage.setItem('lironOrderFields',JSON.stringify(x));}catch(e){}});
 $('cForget').addEventListener('click',function(){var card=$('cForget').parentNode;confirmBox(card,'לנתק את הכרטיס מהטלפון הזה? הכרטיס נשאר אצל לירון.',function(){LS.del('myCard');location.reload();});});
 joinTileUpd();
 
+
+/* ---------- כרטיס לקוח: הזמנה, תשלום, ההזמנות שלי, תקנון ---------- */
+var cuOrders=[],aiOn=false,CITIES=[],OS={pk:{s:0,m:0,l:0},kind:'מהיום למחר'},QT={state:'wait'},qTimer=null,prefilled=false;
+function nis(n){n=Math.round(Number(n)*100)/100;return (n%1?n.toFixed(2):String(n))+'₪';}
+function tab(t){[].forEach.call($('cTabs').children,function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-t')===t))});[].forEach.call(document.querySelectorAll('.cpane'),function(p){p.hidden=p.getAttribute('data-p')!==t});if(t==='orders')renderOrders();}
+$('cTabs').addEventListener('click',function(e){var b=e.target.closest('button');if(b)tab(b.getAttribute('data-t'))});
+document.querySelector('[data-goto="terms"]').addEventListener('click',function(e){e.preventDefault();tab('terms');window.scrollTo({top:0,behavior:'smooth'})});
+function prefill(c){if(prefilled)return;prefilled=true;if(c.city&&!$('oFromCity').value)$('oFromCity').value=c.city;if(c.street&&!$('oFromStreet').value)$('oFromStreet').value=c.street;oRender();}
+function oRender(){['s','m','l'].forEach(function(k){var r=document.querySelector('.pkr[data-k="'+k+'"]');r.querySelector('output').textContent=OS.pk[k];r.querySelector('.m').disabled=!OS.pk[k];r.classList.toggle('has',OS.pk[k]>0)});
+  [].forEach.call($('oKinds').children,function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===OS.kind))});clearTimeout(qTimer);qTimer=setTimeout(quote,250);}
+[].forEach.call(document.querySelectorAll('.pkr'),function(r){var k=r.getAttribute('data-k');r.querySelector('.p').addEventListener('click',function(){if(OS.pk[k]<50){OS.pk[k]++;oRender()}});r.querySelector('.m').addEventListener('click',function(){if(OS.pk[k]>0){OS.pk[k]--;oRender()}})});
+$('oKinds').addEventListener('click',function(e){var b=e.target.closest('button');if(b){OS.kind=b.getAttribute('data-v');oRender()}});
+['oFromCity','oToCity'].forEach(function(id){$(id).addEventListener('input',oRender)});
+['oFromCity','oFromStreet','oToCity','oToStreet','oRName','oRPhone','oTerms'].forEach(function(id){$(id).addEventListener('input',payState);$(id).addEventListener('change',payState)});
+function quote(){var body={fromCity:$('oFromCity').value,toCity:$('oToCity').value,kind:OS.kind,pkgs:OS.pk};
+  if(!body.fromCity||!body.toCity||!(OS.pk.s+OS.pk.m+OS.pk.l)){QT={state:'wait'};drawQ();return}
+  api('a=quote',body).then(function(j){QT=j;drawQ()}).catch(function(){QT={state:'err'};drawQ()});}
+function drawQ(){var L=$('qList');L.textContent='';var li=function(a,b,c){var x=document.createElement('li');if(c)x.className=c;x.innerHTML='<span></span><span dir="ltr"></span>';x.children[0].textContent=a;x.children[1].textContent=b;L.appendChild(x)};
+  if(QT.state==='ok'){$('qTot').textContent=nis(QT.total);QT.lines.forEach(function(l){li(l[0],nis(l[1]))});li('סה״כ לפני מע״מ',nis(QT.net),'sub');li('מע״מ '+QT.vatRate+'%',nis(QT.vat),'vat');li('איסוף: '+[$('oFromStreet').value,QT.fc].filter(Boolean).join(', '),'');li('מסירה: '+[$('oToStreet').value,QT.tc].filter(Boolean).join(', '),'');}
+  else if(QT.state==='coord'){$('qTot').textContent='בתיאום';li(QT.why+'. שולחים ללירון לתיאום מחיר.','')}
+  else if(QT.state==='err'){$('qTot').textContent='—';li('לא הצלחנו לחשב מחיר. בדקו חיבור ונסו שוב.','')}
+  else{$('qTot').textContent='—';li('בוחרים איסוף, מסירה וחבילות, והמחיר מחושב אוטומטית.','')}
+  payState();}
+function missing(){if(!$('oFromCity').value)return 'יישוב האיסוף';if(!$('oFromStreet').value.trim())return 'כתובת האיסוף';if(!$('oToCity').value)return 'יישוב המסירה';if(!$('oToStreet').value.trim())return 'כתובת המסירה';if(!$('oRName').value.trim())return 'שם המקבל';if(!ilPhone($('oRPhone').value))return 'טלפון המקבל';if(!(OS.pk.s+OS.pk.m+OS.pk.l))return 'חבילות';if(QT.state!=='ok'&&QT.state!=='coord')return 'מחיר';if(!$('oTerms').checked)return 'אישור התקנון';return '';}
+function payState(){var miss=missing(),b=$('oPay');b.disabled=!!miss;
+  b.textContent=miss?'חסר: '+miss:QT.state==='coord'?'💬 שליחה ללירון לתיאום מחיר':'💳 תשלום '+nis(QT.total)+' באשראי';}
+function orderSummary(o,q){var m=myCard().card;return ['שלום לירון! 📦 הזמנה מכרטיס לקוח '+m.id+(m.biz?' ('+m.biz+')':''),o?'מספר הזמנה: '+o.id:'','מזמין: '+m.name+' · '+m.phone,'',
+  '📦 '+(q.mix||'')+' · '+q.kind,'📍 איסוף: '+q.from,'🏁 מסירה: '+q.to,'👤 מקבל: '+q.rec,q.notes?'📝 '+q.notes:'','',q.price].filter(function(x,i,a){return x!==''||a[i-1]!==''}).join('\n');}
+function mixTxt(pk){return [pk.s&&pk.s+' × קטנה',pk.m&&pk.m+' × בינונית',pk.l&&pk.l+' × גדולה'].filter(Boolean).join(', ');}
+$('oPay').addEventListener('click',function(){var b=this,e=$('oErr'),m=myCard();e.textContent='';if(missing()||!m||!m.card)return;
+  var c=m.card,coord=QT.state!=='ok';
+  var body={custId:m.id,custToken:m.token,name:c.name+(c.biz?' ('+c.biz+')':''),phone:c.phone,sender:c.name,payer:'sender',payMethod:coord?'pending':'card',
+    fromCity:$('oFromCity').value,fromStreet:$('oFromStreet').value.trim(),toCity:$('oToCity').value,toStreet:$('oToStreet').value.trim(),
+    receiver:$('oRName').value.trim()+' · '+$('oRPhone').value.trim(),kind:OS.kind,pkgs:OS.pk,details:$('oNotes').value.trim()};
+  var sum={mix:mixTxt(OS.pk),kind:OS.kind,from:body.fromStreet+', '+body.fromCity,to:body.toStreet+', '+body.toCity,rec:body.receiver,notes:body.details,price:coord?'מחיר: בתיאום':'💰 '+nis(QT.total)+' כולל מע״מ '+QT.vatRate+'% (לפני מע״מ '+nis(QT.net)+')'};
+  b.disabled=true;b.textContent='שומרים את ההזמנה…';
+  var waWin=coord?window.open('','_blank'):null;
+  api('a=create',body).then(function(j){
+    if(coord){var u='https://wa.me/'+BIZ_WA+'?text='+encodeURIComponent(orderSummary(j,sum));if(waWin)waWin.location.href=u;else location.href=u;toast('ההזמנה נשמרה · '+j.id);resetOrder();tab('orders');api('a=cust-me&id='+m.id+'&t='+m.token).then(function(x){cuOrders=x.orders||[];renderOrders()});return;}
+    b.textContent='פותחים דף תשלום מאובטח…';
+    return fetch('/.netlify/functions/pay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId:j.id,name:c.name,phone:c.phone,back:'app'})})
+      .then(function(r){return r.json().then(function(d){if(!r.ok||!d.url)throw new Error(d.error||'דף התשלום לא נפתח');return d})})
+      .then(function(d){location.href=d.url})
+      .catch(function(x){e.innerHTML=esc(x.message)+'. ההזמנה נשמרה (מספר '+esc(j.id)+'). אפשר <a href="'+BIT+'" target="_blank" rel="noopener" style="color:var(--gold)">לשלם ב-bit</a> או <a target="_blank" rel="noopener" style="color:var(--gold)" href="https://wa.me/'+BIZ_WA+'?text='+encodeURIComponent(orderSummary(j,sum))+'">לשלוח ללירון בוואטסאפ</a>.';payState();});
+  }).catch(function(x){if(waWin)try{waWin.close()}catch(_){}e.textContent=x.message||'ההזמנה לא נשמרה. נסו שוב.';payState();});});
+function resetOrder(){['oToCity','oToStreet','oRName','oRPhone','oNotes','aiTxt'].forEach(function(k){$(k).value=''});OS.pk={s:0,m:0,l:0};OS.kind='מהיום למחר';$('oTerms').checked=false;oRender();}
+function renderOrders(){var box=$('cOrders'),m=myCard();if(!box)return;box.textContent='';
+  if(!cuOrders.length){box.innerHTML='<p class="muted small">עוד אין הזמנות מהכרטיס הזה. ההזמנה הראשונה מחכה בלשונית "הזמנה" 🙂</p>';return}
+  cuOrders.forEach(function(o){var d=document.createElement('div');d.className='oc';var p=o.price||{};
+    d.innerHTML='<div class="ord-h"><b>'+esc(o.from.city)+' ← '+esc(o.to.city)+'</b><span class="badge">'+esc(ST[o.status]||o.status)+'</span></div><div class="muted small" style="margin-top:4px">'+esc(o.id)+' · '+new Date(o.createdAt).toLocaleDateString('he-IL')+' · '+esc(o.pkg.mix||o.pkg.qty+' חבילות')+' · '+esc(o.pkg.kind)+'</div><div style="margin-top:6px"><b>'+(p.total!=null?nis(p.total)+' כולל מע״מ':'מחיר בתיאום')+'</b> <span class="badge '+(o.paid?'paid':'unpaid')+'">'+(o.paid?'שולם ✓':'לא שולם')+'</span></div>';
+    var a=document.createElement('div');a.className='acts';
+    var tr=document.createElement('a');tr.className='btn ghost';tr.href='#/track/'+o.id+'.'+o.token;tr.textContent='📍 מעקב';a.appendChild(tr);
+    if(!o.paid&&p.total!=null&&o.status!=='cancelled'){var pay=document.createElement('button');pay.type='button';pay.className='btn primary';pay.textContent='💳 תשלום '+nis(p.total);pay.addEventListener('click',function(){pay.disabled=true;fetch('/.netlify/functions/pay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId:o.id,name:m.card.name,phone:m.card.phone,back:'app'})}).then(function(r){return r.json()}).then(function(dd){if(dd.url)location.href=dd.url;else{toast(dd.error||'דף התשלום לא נפתח');pay.disabled=false}}).catch(function(){toast('אין חיבור');pay.disabled=false})});a.appendChild(pay);}
+    var wa=document.createElement('a');wa.className='btn wa';wa.target='_blank';wa.rel='noopener';wa.href='https://wa.me/'+BIZ_WA+'?text='+encodeURIComponent(orderSummary(o,{mix:o.pkg.mix,kind:o.pkg.kind,from:[o.from.street,o.from.city].filter(Boolean).join(', '),to:[o.to.street,o.to.city].filter(Boolean).join(', '),rec:o.receiver||'',notes:'',price:(p.total!=null?'💰 '+nis(p.total)+' כולל מע״מ':'מחיר בתיאום')+(o.paid?' · שולם ✓':'')}));wa.textContent='💬 סיכום ללירון';a.appendChild(wa);
+    d.appendChild(a);box.appendChild(d);});}
+/* מילוי חכם: AI בשרת כשהוא מופעל, ואחרת ניתוח מקומי של הטקסט */
+function localParse(t){var f={},txt=' '+t.replace(/[,.;\n]/g,' ')+' ';
+  var found=[];CITIES.forEach(function(c){var i=txt.indexOf(c);if(i>=0)found.push({c:c,i:i,pre:txt.charAt(i-1)})});found.sort(function(a,b){return a.i-b.i||b.c.length-a.c.length});
+  found=found.filter(function(x,k){return !found.some(function(y){return y!==x&&y.i<=x.i&&y.i+y.c.length>=x.i+x.c.length&&y.c.length>x.c.length})});
+  found.forEach(function(x){if(x.pre==='מ'&&!f.fromCity)f.fromCity=x.c;else if((x.pre==='ל'||x.pre==='ב')&&!f.toCity)f.toCity=x.c;});
+  found.forEach(function(x){if(!f.fromCity&&x.c!==f.toCity)f.fromCity=x.c;else if(!f.toCity&&x.c!==f.fromCity)f.toCity=x.c;});
+  var ph=t.replace(/[\s-]/g,'').match(/(?:\+?972|0)5\d{8}/);if(ph)f.receiverPhone=ph[0];
+  var num=function(w){var m=txt.match(new RegExp('(\\d+|שתי|שני|שלוש|ארבע|חמש)\\s*(?:חבילות|חבילה)?\\s*'+w));if(!m)return txt.indexOf(w)>=0?1:0;var map={'שתי':2,'שני':2,'שלוש':3,'ארבע':4,'חמש':5};return map[m[1]]||parseInt(m[1],10)||1};
+  var sm=num('קטנ'),md=num('בינונ'),lg=num('גדול');if(sm)f.small=sm;if(md)f.medium=md;if(lg)f.large=lg;
+  if(!sm&&!md&&!lg){var n=txt.match(/(\d+)\s*חבילות/);f.small=n?parseInt(n[1],10):(/חביל|מעטפ|מסמכ/.test(txt)?1:0)}
+  if(/מיידי|דחוף|עכשיו/.test(txt))f.kind='ספיישל / שליחות מיידית';else if(/היום|עד 3 שעות/.test(txt)&&!/מחר/.test(txt))f.kind='מהיום להיום';else if(/מחר/.test(txt))f.kind='מהיום למחר';
+  var st=t.match(/(?:רחוב|רח'|ברחוב)\s*([^\d,]+\s*\d+)/);if(st)f.toStreet=st[1].trim();
+  var nm=t.match(/(?:למקבל|לידי|עבור|ל-)\s*([א-ת]{2,}(?:\s[א-ת]{2,})?)/)||t.match(/(?:^|[\s,])ל?([א-ת]{2,}(?:\s[א-ת]{2,})?)\s*[,:\-]?\s*(?:\+?972|0)5\d/);if(nm){var rn=nm[1].replace(/^ל(?=[א-ת]{2})/,'');if(CITIES.indexOf(rn)<0&&!/חבילות|קטנות|היום|מחר/.test(rn))f.receiver=rn;}
+  return f;}
+function applyFields(f){var n=0;var set=function(id,v){if(v){$(id).value=v;n++}};set('oFromCity',f.fromCity);set('oFromStreet',f.fromStreet);set('oToCity',f.toCity);set('oToStreet',f.toStreet);set('oRName',f.receiver);set('oRPhone',f.receiverPhone);if(f.notes)set('oNotes',f.notes);
+  if(f.small||f.medium||f.large){OS.pk={s:f.small||0,m:f.medium||0,l:f.large||0};n++}if(f.kind){OS.kind=f.kind;n++}oRender();return n;}
+$('aiGo').addEventListener('click',function(){var t=$('aiTxt').value.trim(),b=this,m=myCard();if(t.length<4){$('aiMsg').textContent='כתבו קצת פרטים על המשלוח';return}
+  var done=function(f,src){var n=applyFields(f);$('aiMsg').textContent=n?'✓ מולאו '+n+' פרטים '+src+'. בדקו והשלימו את מה שחסר.':'לא זיהינו פרטים. נסו לכתוב שם עיר, כמות חבילות ולמי.';b.disabled=false;b.textContent='✨ מילוי חכם של הטופס';};
+  b.disabled=true;b.textContent='✨ מנתחים…';
+  if(aiOn&&m)api('a=cust-ai',{id:m.id,t:m.token,text:t}).then(function(j){done(j.fields||{},'בעזרת AI')}).catch(function(){done(localParse(t),'אוטומטית')});
+  else done(localParse(t),'אוטומטית');});
+oRender();
+
 /* ---------- ניהול: לקוחות ---------- */
 var custs=[];
-function welcomeMsg(c){return 'שלום '+c.name+' 👋\nכאן לירון משלוחים. פתחנו לך כרטיס לקוח, מספר '+c.id+'.\nלהזמנת משלוח: '+location.origin+'/order.html\nלמעקב ולאפליקציה: '+location.origin+'/app.html\nלכל שאלה אני כאן בוואטסאפ 🙂';}
+function cardLink(c){return location.origin+'/app.html#/c/'+c.id+'.'+c.access;}
+function welcomeMsg(c){return 'שלום '+c.name+' 👋\nכאן לירון משלוחים. פתחנו לך כרטיס לקוח אישי, מספר '+c.id+'.\n\nבכרטיס אפשר להזמין משלוח ולשלם באשראי, לראות את ההזמנות שלך ואת התקנון:\n'+(c.access?cardLink(c):location.origin+'/app.html')+'\n\n(הקישור אישי, לא להעביר הלאה). לכל שאלה אני כאן בוואטסאפ 🙂';}
 function loadCusts(){devApi('a=admin-customers').then(function(j){custs=j.customers||[];renderCusts();}).catch(function(e){if(e.status===401)return;$('cuList').innerHTML='<p class="err">'+esc(e.message||'לא נטען')+'</p>';});}
 function renderCusts(){var q=$('cuSearch').value.trim().toLowerCase(),box=$('cuList');box.textContent='';$('cuN').textContent=custs.length+' לקוחות';
   var list=custs.filter(function(c){return !q||[c.id,c.name,c.phone,c.biz,c.city,c.street,c.notes].join(' ').toLowerCase().indexOf(q)>=0;});
@@ -472,6 +654,7 @@ function renderCusts(){var q=$('cuSearch').value.trim().toLowerCase(),box=$('cuL
     var acts=document.createElement('div');acts.className='acts';
     var wa=document.createElement('a');wa.className='btn wa';wa.target='_blank';wa.rel='noopener';wa.href='https://wa.me/'+waNum(c.phone)+'?text='+encodeURIComponent(welcomeMsg(c));wa.textContent='💬 הודעת פתיחה';acts.appendChild(wa);
     var tl=document.createElement('a');tl.className='btn ghost';tl.href='tel:'+c.phone;tl.textContent='📞 חיוג';acts.appendChild(tl);
+    if(c.access){var lk=document.createElement('button');lk.type='button';lk.className='btn ghost';lk.textContent='🔗 העתקת קישור לכרטיס';lk.addEventListener('click',function(){var u=cardLink(c);try{navigator.clipboard.writeText(u).then(function(){toast('הקישור לכרטיס הועתק')},function(){prompt('הקישור לכרטיס:',u)})}catch(_){prompt('הקישור לכרטיס:',u)}});acts.appendChild(lk);}
     var ed=document.createElement('button');ed.type='button';ed.className='btn ghost';ed.textContent='✏️ עריכה';ed.addEventListener('click',function(){$('cuId').value=c.id;$('cuName').value=c.name;$('cuPhone').value=c.phone;$('cuType').value=c.type||'private';$('cuBiz').value=c.biz||'';$('cuCity').value=c.city||'';$('cuStreet').value=c.street||'';$('cuNotes').value=c.notes||'';$('cuSave').textContent='שמירת השינויים ב-'+c.id;$('cuAdd').open=true;$('cuAdd').scrollIntoView({behavior:'smooth',block:'center'});});acts.appendChild(ed);
     var dl=document.createElement('button');dl.type='button';dl.className='btn bad';dl.textContent='מחיקה';dl.addEventListener('click',function(){confirmBox(d,'למחוק את כרטיס הלקוח של '+c.name+'?',function(){devApi('a=admin-customer-delete',{id:c.id}).then(function(){toast('הלקוח נמחק');loadCusts();}).catch(function(e){toast(e.message||'לא נמחק')});});});acts.appendChild(dl);
     d.appendChild(acts);box.appendChild(d);});
