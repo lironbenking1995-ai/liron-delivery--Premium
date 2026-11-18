@@ -252,7 +252,7 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
       <div class="card ai">
         <div class="ord-h"><h2 style="margin:0">✨ הזמנה חכמה</h2><span class="badge" id="aiBadge">מילוי אוטומטי</span></div>
         <p class="muted small" style="margin:6px 0 0">כתבו במילים שלכם מה שולחים, ואנחנו נמלא את הטופס. לדוגמה: "2 חבילות קטנות מאשקלון לרחובות, הרצל 10, למשה 0521234567, היום"</p>
-        <div class="field"><textarea id="aiTxt" maxlength="600" placeholder="מה שולחים, מאיפה, לאן ולמי?"></textarea></div>
+        <div class="field"><textarea id="aiTxt" aria-label="תיאור המשלוח במילים שלכם" maxlength="600" placeholder="מה שולחים, מאיפה, לאן ולמי?"></textarea></div>
         <button type="button" class="btn ghost block" id="aiGo" style="margin-top:10px">✨ מילוי חכם של הטופס</button>
         <p class="muted small" id="aiMsg" style="margin:8px 0 0"></p>
       </div>
@@ -1067,5 +1067,92 @@ LS.del('pin');route();
 if(mode==='courier'&&LS.get('sharing',false)&&LS.get('ctok',null)){startShare();}
 })();
 </script>
+<!-- ===== נגישות: כפתור ותפריט (תקנה 35 / ת"י 5568) ===== -->
+<a href="#main" class="a11y-skip" id="a11ySkip">דילוג לתוכן הראשי</a>
+<style id="a11yCss">
+.a11y-skip{position:fixed;top:-60px;right:12px;z-index:100000;padding:12px 18px;border-radius:10px;background:#ffd12c;color:#000;font:800 16px Heebo,Arial,sans-serif;text-decoration:none;transition:top .15s}
+.a11y-skip:focus{top:12px;outline:3px solid #000;outline-offset:2px}
+#a11yBtn{position:fixed;left:0;top:42%;z-index:99990;width:52px;height:52px;display:grid;place-items:center;border:0;border-radius:0 14px 14px 0;background:#1565c0;color:#fff;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.45),0 0 0 2px #fff inset}
+#a11yBtn svg{width:32px;height:32px}
+#a11yBtn:focus-visible{outline:3px solid #ffd12c;outline-offset:2px}
+#a11yPanel{position:fixed;left:8px;top:50%;transform:translateY(-50%);z-index:99991;width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain;background:#fff;color:#111;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.55);font:16px/1.4 Arial,Heebo,sans-serif;direction:rtl;text-align:right}
+#a11yPanel[hidden]{display:none}
+#a11yPanel .ah{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#1565c0;color:#fff;border-radius:16px 16px 0 0}
+#a11yPanel .ah h2{margin:0;font-size:19px;font-weight:800;color:#fff}
+#a11yPanel .ax{width:40px;height:40px;border-radius:50%;border:2px solid #fff;background:transparent;color:#fff;font-size:20px;cursor:pointer}
+#a11yPanel .ag{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px}
+#a11yPanel .ab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:84px;padding:8px;border-radius:12px;border:2px solid #d0d7e2;background:#f4f7fb;color:#111;font:700 14px Arial,sans-serif;cursor:pointer;text-align:center}
+#a11yPanel .ab svg{width:28px;height:28px;color:#1565c0}
+#a11yPanel .ab[aria-pressed="true"]{border-color:#1565c0;background:#e3efff;box-shadow:0 0 0 2px #1565c0 inset}
+#a11yPanel .ab:focus-visible,#a11yPanel .ax:focus-visible,#a11yPanel a:focus-visible{outline:3px solid #ff9800;outline-offset:2px}
+#a11yPanel .fs{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:12px;border:2px solid #d0d7e2;background:#f4f7fb;font-weight:700}
+#a11yPanel .fs button{width:46px;height:42px;border-radius:10px;border:2px solid #1565c0;background:#fff;color:#1565c0;font:800 18px Arial,sans-serif;cursor:pointer}
+#a11yPanel .fs output{min-width:52px;text-align:center;font-weight:800}
+#a11yPanel .af{display:flex;flex-direction:column;gap:8px;padding:0 14px 14px}
+#a11yPanel .ar{min-height:46px;border-radius:12px;border:0;background:#c62828;color:#fff;font:800 15px Arial,sans-serif;cursor:pointer}
+#a11yPanel .af a{color:#0d47a1;font-weight:800;text-align:center;text-decoration:underline}
+#a11yPanel .an{margin:0;color:#444;font-size:12.5px;text-align:center}
+#a11yGuide{position:fixed;left:0;right:0;height:12px;z-index:99980;pointer-events:none;background:rgba(255,209,44,.35);border-top:3px solid #000;border-bottom:3px solid #000;display:none}
+/* ---- מצבים ---- */
+html.a11y-contrast body,html.a11y-contrast body *:not(#a11yPanel):not(#a11yPanel *):not(#a11yBtn):not(#a11yBtn *){background-color:#000!important;background-image:none!important;color:#fff!important;border-color:#fff!important;text-shadow:none!important;box-shadow:none!important;-webkit-text-fill-color:#fff!important}
+html.a11y-contrast body a:not(#a11yPanel a),html.a11y-contrast body a:not(#a11yPanel a) *{color:#ffff00!important;-webkit-text-fill-color:#ffff00!important}
+html.a11y-contrast body button:not(#a11yPanel button):not(#a11yBtn){border:2px solid #ffff00!important}
+html.a11y-contrast img,html.a11y-contrast svg image{filter:none!important}
+html.a11y-invert{filter:invert(1) hue-rotate(180deg)}
+html.a11y-invert img,html.a11y-invert video,html.a11y-invert #a11yPanel,html.a11y-invert #a11yBtn{filter:invert(1) hue-rotate(180deg)}
+html.a11y-gray{filter:grayscale(1)}
+html.a11y-links a:not(#a11yPanel a){text-decoration:underline!important;text-underline-offset:3px;outline:2px dashed #ff9800!important;outline-offset:2px}
+html.a11y-heads h1,html.a11y-heads h2,html.a11y-heads h3{outline:3px solid #2196f3!important;outline-offset:4px;background:rgba(33,150,243,.12)!important}
+html.a11y-font body,html.a11y-font body *:not(svg):not(svg *){font-family:Arial,"Helvetica Neue",sans-serif!important;font-style:normal!important;letter-spacing:normal}
+html.a11y-space body *:not(#a11yPanel):not(#a11yPanel *){line-height:1.8!important;letter-spacing:.12em!important;word-spacing:.16em!important}
+html.a11y-space p{margin-bottom:2em!important}
+html.a11y-still *,html.a11y-still *::before,html.a11y-still *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html.a11y-focus *:focus{outline:4px solid #ff9800!important;outline-offset:3px!important;box-shadow:0 0 0 7px #000!important}
+html.a11y-cursor,html.a11y-cursor *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24'%3E%3Cpath d='M4 2l15 10-7 1.5L8.5 21z' fill='%23000' stroke='%23fff' stroke-width='1.4' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2,auto!important}
+@media (max-width:600px){#a11yBtn{width:46px;height:46px;top:38%}#a11yBtn svg{width:28px;height:28px}}
+@media print{#a11yBtn,#a11yPanel,#a11yGuide,.a11y-skip{display:none!important}}
+</style>
+<button type="button" id="a11yBtn" aria-label="תפריט נגישות" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11yPanel" title="נגישות (Alt+A)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="4" r="2"/><path d="M21 9c-2.6.7-5.3 1-9 1S5.6 9.7 3 9l-.5 2c2 .6 4 .9 6 1.1V22h2.2l.8-6h1l.8 6h2.2V12.1c2-.2 4-.5 6-1.1z"/></svg></button>
+<div id="a11yPanel" role="dialog" aria-modal="false" aria-labelledby="a11yTitle" hidden>
+ <div class="ah"><h2 id="a11yTitle">תפריט נגישות</h2><button type="button" class="ax" id="a11yClose" aria-label="סגירת תפריט הנגישות">✕</button></div>
+ <div class="ag">
+  <div class="fs" role="group" aria-label="גודל טקסט"><span>גודל טקסט</span><button type="button" id="a11yMinus" aria-label="הקטנת טקסט">א−</button><output id="a11yZoom" aria-live="polite">100%</output><button type="button" id="a11yPlus" aria-label="הגדלת טקסט">א+</button></div>
+  <button type="button" class="ab" data-a="contrast" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>ניגודיות גבוהה</button>
+  <button type="button" class="ab" data-a="invert" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 21L21 3"/></svg>ניגודיות הפוכה</button>
+  <button type="button" class="ab" data-a="gray" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M5 12h14M12 5v14" opacity=".5"/></svg>גווני אפור</button>
+  <button type="button" class="ab" data-a="links" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>הדגשת קישורים</button>
+  <button type="button" class="ab" data-a="heads" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M18 4v16M6 12h12"/></svg>הדגשת כותרות</button>
+  <button type="button" class="ab" data-a="font" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20L10 4h1l6 16M6.5 14h8"/></svg>גופן קריא</button>
+  <button type="button" class="ab" data-a="space" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>ריווח טקסט</button>
+  <button type="button" class="ab" data-a="still" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6" stroke-linecap="round"/></svg>עצירת אנימציות</button>
+  <button type="button" class="ab" data-a="focus" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h1M11 10h1M15 10h2M7 14h10" stroke-linecap="round"/></svg>ניווט מקלדת</button>
+  <button type="button" class="ab" data-a="cursor" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 2l14 10-6.5 1.4L9 21z"/></svg>סמן עכבר גדול</button>
+  <button type="button" class="ab" data-a="guide" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 10h20M2 14h20"/></svg>מדריך קריאה</button>
+ </div>
+ <div class="af"><button type="button" class="ar" id="a11yReset">↺ איפוס הגדרות נגישות</button><a href="/accessibility.html">הצהרת נגישות</a><p class="an">פתיחה וסגירה מהירה: Alt+A · סגירה: Esc</p></div>
+</div>
+<div id="a11yGuide" aria-hidden="true"></div>
+<script id="a11yJs">
+(function(){var d=document,R=d.documentElement,K='lironA11y',S={};try{S=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){S={}}
+var btn=d.getElementById('a11yBtn'),pan=d.getElementById('a11yPanel'),guide=d.getElementById('a11yGuide'),Z=[100,110,120,130,145,160];
+function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+function apply(){['contrast','invert','gray','links','heads','font','space','still','focus','cursor','guide'].forEach(function(k){R.classList.toggle('a11y-'+k,!!S[k]);var b=pan.querySelector('[data-a="'+k+'"]');if(b)b.setAttribute('aria-pressed',S[k]?'true':'false')});
+ var z=Z[S.z||0]||100,W={a11yBtn:1,a11yPanel:1,a11yGuide:1,a11ySkip:1};[].forEach.call(d.body.children,function(c){if(W[c.id]||/^(SCRIPT|STYLE|LINK)$/.test(c.tagName))return;c.style.zoom=z===100?'':String(z/100)});d.getElementById('a11yZoom').textContent=z+'%';guide.style.display=S.guide?'block':'none'}
+function open(){pan.hidden=false;btn.setAttribute('aria-expanded','true');setTimeout(function(){d.getElementById('a11yClose').focus()},30)}
+function close(){pan.hidden=true;btn.setAttribute('aria-expanded','false');btn.focus()}
+btn.addEventListener('click',function(){pan.hidden?open():close()});d.getElementById('a11yClose').addEventListener('click',close);
+pan.addEventListener('click',function(e){var b=e.target.closest('.ab');if(!b)return;var k=b.getAttribute('data-a');S[k]=!S[k];if(k==='contrast'&&S[k]){S.invert=false;S.gray=false}if((k==='invert'||k==='gray')&&S[k]){S.contrast=false;if(k==='invert')S.gray=false;else S.invert=false}save();apply()});
+d.getElementById('a11yPlus').addEventListener('click',function(){S.z=Math.min(Z.length-1,(S.z||0)+1);save();apply()});
+d.getElementById('a11yMinus').addEventListener('click',function(){S.z=Math.max(0,(S.z||0)-1);save();apply()});
+d.getElementById('a11yReset').addEventListener('click',function(){S={};save();apply()});
+d.addEventListener('keydown',function(e){if(e.altKey&&(e.key==='a'||e.key==='A'||e.key==='ש'||e.code==='KeyA')){e.preventDefault();pan.hidden?open():close()}else if(e.key==='Escape'&&!pan.hidden)close();
+ else if(e.key==='Tab'&&!pan.hidden&&pan.contains(d.activeElement)){var f=pan.querySelectorAll('button,a[href]'),a=f[0],z=f[f.length-1];if(e.shiftKey&&d.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&d.activeElement===z){e.preventDefault();a.focus()}}});
+d.addEventListener('mousemove',function(e){if(S.guide)guide.style.top=(e.clientY-6)+'px'},{passive:true});
+d.addEventListener('touchmove',function(e){if(S.guide&&e.touches[0])guide.style.top=(e.touches[0].clientY-30)+'px'},{passive:true});
+var m=d.querySelector('main')||d.querySelector('[role=main]'),sk=d.getElementById('a11ySkip');if(m&&!m.id)m.id='main';if(!m){if(sk)sk.remove()}else if(sk){sk.href='#'+m.id;d.body.insertBefore(sk,d.body.firstChild);sk.addEventListener('click',function(e){e.preventDefault();m.focus();m.scrollIntoView()})}
+if(m&&!m.hasAttribute('tabindex'))m.setAttribute('tabindex','-1');
+apply()})();
+</script>
+<!-- ===== סוף נגישות ===== -->
 </body>
 </html>
