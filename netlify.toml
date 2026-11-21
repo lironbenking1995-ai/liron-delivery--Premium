@@ -45,6 +45,23 @@
   status = 404
   force = true
 
+# הורדת האפליקציה: הקובץ נכלל בתוך פונקציית ההורדה המוגנת
+[functions."apk-dl"]
+  included_files = ["liron-app.apk"]
+
+# אין הורדה ישירה של הקובץ – רק דרך דף ההורדה עם שם משתמש וסיסמה
+[[redirects]]
+  from = "/liron-app.apk"
+  to = "/download.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/apk-dl.js"
+  to = "/404.html"
+  status = 404
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
