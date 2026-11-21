@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.liron_delivery.www.twa",
+        "sha256_cert_fingerprints": ["CC:FF:47:41:04:0A:F0:88:4B:57:8A:2C:2D:29:E0:A5:CA:CC:39:B3:31:A5:0D:FE:9A:85:5B:E0:F2:ED:FF:96"]
+      }
+    }]
