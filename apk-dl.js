@@ -1,5 +1,7 @@
 // הורדת אפליקציית לירון משלוחים (APK) – רק עם שם משתמש וסיסמה.
-// שם המשתמש והסיסמה נשמרים רק ב-Netlify → Environment variables:
+// את שם המשתמש והסיסמה מגדירים בדף ההורדה עצמו ← "הגדרות מנהל" (עם קוד המנהל).
+// הסיסמה נשמרת מוצפנת (PBKDF2) ב-Netlify Blobs, לא בקוד.
+// אפשרות נוספת: Netlify → Environment variables:
 //   APK_USER  = שם המשתמש
 //   APK_PASS  = הסיסמה (לפחות 6 תווים)
 //   (אפשר גם כמה משתמשים: APK_USERS = "שם:סיסמה,שם2:סיסמה2")
@@ -26,6 +28,20 @@ async function same(want, got) {
   const a = await sha('c:' + want), b = await sha('c:' + got);
   let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return d === 0;
+}
+async function pbkdf2(pass, salt) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+  const b = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: 150000 }, k, 256);
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+// קוד מנהל: אותו קוד של כניסת הניהול באפליקציה (ADMIN_PIN / MANAGER_CODES / קודי מנהלים שנוספו באפליקציה)
+async function isAdminCode(code, s) {
+  code = String(code || ''); if (code.length < 4) return false;
+  if (process.env.ADMIN_PIN && await same(process.env.ADMIN_PIN, code)) return true;
+  for (const x of String(process.env.MANAGER_CODES || '').split(',')) { const k = x.lastIndexOf(':'); if (k > 0 && x.slice(k + 1).trim().length >= 4 && await same(x.slice(k + 1).trim(), code)) return true; }
+  const list = (await s.get('managers', { type: 'json' })) || [];
+  for (const m of list) { if (m.active === false || !m.salt || !m.hash) continue; if (await sha(m.salt + ':' + code) === m.hash) return true; }
+  return false;
 }
 const ipOf = (req, ctx) => String(ctx?.ip || req.headers.get('x-nf-client-connection-ip') || (req.headers.get('x-forwarded-for') || '').split(',')[0] || 'unknown').trim().slice(0, 64);
 function originOk(req, url) {
@@ -67,7 +83,8 @@ export default async (req, context) => {
     if (req.method !== 'POST') return json(405, { error: 'שיטה לא נתמכת' });
     if (!originOk(req, url)) return json(403, { error: 'בקשה לא מורשית' });
     const list = users();
-    if (!list.length) return json(503, { error: 'ההורדה עדיין לא הוגדרה. פנו ללירון משלוחים.' });
+    const cred = await s.get('apk-cred', { type: 'json' });
+    if (!list.length && !cred) return json(503, { error: 'ההורדה עדיין לא הוגדרה. מנהל: לחצו למטה על "הגדרות מנהל".', setup: true });
     let r = await s.get(rlk, { type: 'json' });
     if (!r || Date.now() - r.t > FAIL_WIN) r = { n: 0, t: Date.now() };
     if (r.until && r.until > Date.now()) return json(429, { error: 'יותר מדי ניסיונות. נסו שוב בעוד 15 דקות.' });
@@ -75,6 +92,11 @@ export default async (req, context) => {
     const user = String(body.user || '').trim().slice(0, 64), pass = String(body.pass || '').slice(0, 128);
     let ok = null;
     for (const x of list) { const m1 = await same(x.u.toLowerCase(), user.toLowerCase()); const m2 = await same(x.p, pass); if (m1 && m2) ok = x; }
+    if (!ok && cred && cred.u && cred.salt) {
+      const m1 = await same(cred.u.toLowerCase(), user.toLowerCase());
+      const m2 = await same(cred.hash, await pbkdf2(pass, cred.salt));
+      if (m1 && m2) ok = { u: cred.u };
+    }
     if (!ok) {
       r.n++; if (r.n >= FAIL_MAX) { r.until = Date.now() + FAIL_WIN; console.warn('[security] apk login LOCKED', 'ip=' + ip); }
       await s.setJSON(rlk, r);
@@ -86,6 +108,29 @@ export default async (req, context) => {
     await s.setJSON('apk-tok:' + t, { exp: Date.now() + TOK_MIN * 60 * 1000, uses: 0, u: ok.u });
     console.log('[apk] login ok', ok.u);
     return json(200, { ok: true, url: '/.netlify/functions/apk-dl?t=' + t });
+  }
+
+  // הגדרת שם משתמש וסיסמה להורדה – רק עם קוד מנהל
+  if (a === 'setup') {
+    if (req.method !== 'POST') return json(405, { error: 'שיטה לא נתמכת' });
+    if (!originOk(req, url)) return json(403, { error: 'בקשה לא מורשית' });
+    let r = await s.get(rlk, { type: 'json' });
+    if (!r || Date.now() - r.t > FAIL_WIN) r = { n: 0, t: Date.now() };
+    if (r.until && r.until > Date.now()) return json(429, { error: 'יותר מדי ניסיונות. נסו שוב בעוד 15 דקות.' });
+    let body = {}; try { body = await req.json(); } catch {}
+    if (!(await isAdminCode(body.code, s))) {
+      r.n++; if (r.n >= FAIL_MAX) { r.until = Date.now() + FAIL_WIN; console.warn('[security] apk setup LOCKED', 'ip=' + ip); }
+      await s.setJSON(rlk, r); await new Promise(z => setTimeout(z, 400));
+      return json(401, { error: 'קוד מנהל שגוי' });
+    }
+    const user = String(body.user || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 64), pass = String(body.pass || '').slice(0, 128);
+    if (user.length < 2) return json(400, { error: 'שם המשתמש קצר מדי (לפחות 2 תווים)' });
+    if (pass.length < 6) return json(400, { error: 'הסיסמה קצרה מדי (לפחות 6 תווים)' });
+    const salt = rnd(16);
+    await s.setJSON('apk-cred', { u: user, salt, hash: await pbkdf2(pass, salt), at: Date.now() });
+    await s.delete(rlk).catch(() => {});
+    console.warn('[security] apk download credentials changed', 'ip=' + ip);
+    return json(200, { ok: true });
   }
 
   // 2) הורדה עם הקישור הזמני
