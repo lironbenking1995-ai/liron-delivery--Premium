@@ -1,6 +1,6 @@
 // Service Worker של לירון משלוחים: האפליקציה והאתר נפתחים מהר ועובדים גם בלי אינטרנט.
 // הקובץ הזה הוא פונקציה של Netlify שמחזירה את קוד ה-Service Worker בכתובת /sw.js
-const VERSION = 'liron-v1-2026-11-23';
+const VERSION = 'liron-v2-2026-11-24';
 const SW = `
 const C='${VERSION}';
 const PRE=['/app.html','/index.html','/liron-logo.webp','/manifest.json','/IMG_4754.png','/IMG_4753.png'];
