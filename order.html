@@ -156,7 +156,16 @@ h1 span{color:#7e6200}
 .sltm button:disabled{opacity:.4;text-decoration:line-through;cursor:not-allowed}
 .slday button:focus-visible,.sltm button:focus-visible{outline:3px solid #1d1d1f;outline-offset:2px}
 </style>
-<style>@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style></head>
+<style>@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style><style id="colorful">:root{--a1:#0a84ff;--a2:#9b51e0;--t1:#0055c4;--t2:#6a1fc4;--tint:#f2f6ff}
+body{background:radial-gradient(70% 40% at 95% 0%,color-mix(in srgb,var(--a1) 16%,transparent),transparent 70%) no-repeat,radial-gradient(60% 35% at 0% 60%,color-mix(in srgb,var(--a2) 12%,transparent),transparent 70%) no-repeat,var(--tint)!important}
+h1 span,h1 b{background:linear-gradient(90deg,var(--t1),var(--t2));-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent}
+.kick{background:linear-gradient(90deg,var(--t1),var(--t2))!important;color:#fff!important}
+main>.card,main>section.card{border-top:5px solid var(--c)!important;background:linear-gradient(180deg,color-mix(in srgb,var(--c) 8%,#fff),#fff 50%)!important}
+#s1{--c:#0a84ff;--cd:#0055c4}#s2{--c:#ff7a00;--cd:#b34700}#s3{--c:#9b51e0;--cd:#6a1fc4}#s4{--c:#22b35e;--cd:#14703a}#s5{--c:#ff2d78;--cd:#c2185b}#s6{--c:#00a6c7;--cd:#006b80}#s7{--c:#ff9f0a;--cd:#a35400}#sSlot{--c:#5b5bff;--cd:#3535c9}#s8{--c:#1d1d1f;--cd:#1d1d1f}
+main>.card h2 .n{background:var(--cd)!important;color:#fff!important;border-color:transparent!important}
+.opt[aria-checked=true]{border-color:var(--c,#e3a700)!important;background:color-mix(in srgb,var(--c,#ffd12c) 10%,#fff)!important}
+.price{border-color:color-mix(in srgb,var(--a1) 35%,transparent)!important;background:linear-gradient(160deg,#fff,color-mix(in srgb,var(--a1) 8%,#fff))!important}
+</style></head>
 <body>
 <header class="top">
   <div class="bar">

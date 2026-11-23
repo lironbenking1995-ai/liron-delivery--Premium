@@ -59,6 +59,18 @@ h1{font-size:clamp(2.2rem,6vw,3.4rem);line-height:1.08;margin:14px 0 8px;font-we
 .done{text-align:center}.done i{display:grid;place-items:center;width:70px;height:70px;margin:6px auto 10px;border-radius:50%;background:#2ecc71;color:#fff;font-style:normal;font-size:36px;font-weight:900}
 footer{text-align:center;color:#6e6e73;font-size:.88rem;padding:30px 18px}
 @media(max-width:480px){.grid{grid-template-columns:1fr 1fr;gap:10px}.pc .tx{padding:10px 12px 12px}.pc p{display:none}.pc b{font-size:.98rem}}
+</style><style id="colorful">:root{--a1:#ff2d78;--a2:#ff9f0a;--t1:#c2185b;--t2:#a14f00;--tint:#fff3f6}
+body{background:radial-gradient(70% 40% at 95% 0%,color-mix(in srgb,var(--a1) 16%,transparent),transparent 70%) no-repeat,radial-gradient(60% 35% at 0% 60%,color-mix(in srgb,var(--a2) 12%,transparent),transparent 70%) no-repeat,var(--tint)!important}
+h1 span,h1 b{background:linear-gradient(90deg,var(--t1),var(--t2));-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent}
+.kick{background:linear-gradient(90deg,var(--t1),var(--t2))!important;color:#fff!important}
+.chips span{border-color:color-mix(in srgb,var(--c) 40%,transparent)!important;background:color-mix(in srgb,var(--c) 10%,#fff)!important}
+.chips span:nth-of-type(6n+1){--c:#0a84ff;--cd:#0055c4}.chips span:nth-of-type(6n+2){--c:#ff7a00;--cd:#b34700}.chips span:nth-of-type(6n+3){--c:#9b51e0;--cd:#6a1fc4}.chips span:nth-of-type(6n+4){--c:#22b35e;--cd:#14703a}.chips span:nth-of-type(6n+5){--c:#ff2d78;--cd:#c2185b}.chips span:nth-of-type(6n){--c:#00a6c7;--cd:#006b80}
+.pc{border-top:5px solid var(--c)!important}
+.pc:nth-of-type(6n+1){--c:#0a84ff;--cd:#0055c4}.pc:nth-of-type(6n+2){--c:#ff7a00;--cd:#b34700}.pc:nth-of-type(6n+3){--c:#9b51e0;--cd:#6a1fc4}.pc:nth-of-type(6n+4){--c:#22b35e;--cd:#14703a}.pc:nth-of-type(6n+5){--c:#ff2d78;--cd:#c2185b}.pc:nth-of-type(6n){--c:#00a6c7;--cd:#006b80}
+.pc .pr strong{color:var(--cd)!important}
+.cats button[aria-pressed=true]{background:linear-gradient(90deg,var(--t1),var(--t2))!important;border-color:transparent!important}
+.box{border-top:4px solid color-mix(in srgb,var(--a1) 60%,transparent)!important}
+.done i{background:linear-gradient(135deg,#22b35e,#00a6a6)!important}
 </style></head><body>
 <header class="top"><div class="w"><a class="brand" href="/"><img src="/liron-logo.webp" alt="" width="40" height="40">לירון משלוחים</a><button type="button" class="cartb" id="cartB" aria-label="הסל"><span>🛒 הסל</span><i id="cartN">0</i></button></div></header>
 <main>

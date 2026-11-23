@@ -10,7 +10,12 @@ dl{margin:18px 0;display:grid;gap:8px;text-align:right}dl div{display:flex;justi
 .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:22px}
 a.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;border-radius:12px;font-weight:800;text-decoration:none}
 .p{background:var(--gold);color:#0a0a0a}.o{border:1px solid #00000048;color:#000000}
-</style><style>@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style></head><body>
+</style><style>@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style><style id="colorful">:root{--a1:#22b35e;--a2:#00a6c7;--t1:#14703a;--t2:#006b80;--tint:#effaf4}
+body{background:radial-gradient(70% 40% at 95% 0%,color-mix(in srgb,var(--a1) 16%,transparent),transparent 70%) no-repeat,radial-gradient(60% 35% at 0% 60%,color-mix(in srgb,var(--a2) 12%,transparent),transparent 70%) no-repeat,var(--tint)!important}
+h1 span,h1 b{background:linear-gradient(90deg,var(--t1),var(--t2));-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent}
+.kick{background:linear-gradient(90deg,var(--t1),var(--t2))!important;color:#fff!important}
+.box{border-top:5px solid var(--a1)!important}
+</style></head><body>
 <main class="box" id="box"><div class="ic" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".3"></circle></svg></div><h1 id="t">בודקים את התשלום…</h1><p id="m">רק רגע.</p><dl id="d" hidden></dl><div class="btns" id="b" hidden></div><p style="margin:18px 0 0"><a id="toCard" href="/app.html#/card" style="display:none;margin-bottom:14px;padding:14px 22px;border-radius:14px;background:#ffd12c;color:#0a0a0a;font-weight:900;text-decoration:none">👤 חזרה לכרטיס הלקוח שלי</a><br><a href="https://www.liron-delivery.com/" style="color:#7e6200;font-weight:800">🏠 יציאה לדף הראשי</a><script>try{if(new URLSearchParams(location.search).get("back")==="app")document.getElementById("toCard").style.display="inline-block"}catch(e){}</script></p></main>
 <script>
 if(window.top!==window.self){try{window.top.location.href=location.href}catch(e){}}
