@@ -322,6 +322,10 @@ async function slotRelease(s, o) {
   if (m[o.schedule.slot]) { m[o.schedule.slot]--; await s.setJSON(k, m); }
   o.schedule.released = true;
 }
+// ---- הפעלה / כיבוי של קבלת הזמנות ----
+const ORD_MSG = 'כרגע לא מקבלים הזמנות חדשות באתר. אפשר לחזור מאוחר יותר או לשלוח הודעה בוואטסאפ.';
+async function ordCfg(s) { const c = (await s.get('ord-cfg', { type: 'json' })) || {}; return { off: !!c.off, shop: !!c.shop, msg: c.msg || '' }; }
+const ordClosed = msg => json(503, { error: msg || ORD_MSG, closed: true });
 // ---- קופונים ----
 // קופונים שמוגדרים מראש. כל אחד נוסף פעם אחת בלבד, ואחר כך אפשר לערוך או למחוק אותו מהניהול.
 const SEED_COUPONS = [
@@ -602,6 +606,7 @@ export default async (req, context) => {
     return json(200, { ...r, total: r2s(amount - r.off) });
   }
   // ---------- תורים: זמנים פנויים ----------
+  if (a === 'ordering') { const c = await ordCfg(s); return json(200, { open: !c.off, shop: !(c.off && c.shop), msg: c.off ? (c.msg || ORD_MSG) : '' }); }
   if (a === 'slots') {
     const cfg = await slotCfg(s);
     if (!cfg.on) return json(200, { on: false });
@@ -622,6 +627,7 @@ export default async (req, context) => {
     return new Response(bin, { status: 200, headers: { 'content-type': im.t, 'cache-control': 'public, max-age=604800, immutable', 'x-content-type-options': 'nosniff' } });
   }
   if (a === 'shop-order' && req.method === 'POST') {
+    { const oc = await ordCfg(s); if (oc.off && oc.shop && !body.quote) return ordClosed(oc.msg); }
     const ck = await ipKey('rc:', ip); const cr = await rlGet(s, ck, CREATE_WIN);
     if (cr.n >= CREATE_MAX) return json(429, { error: 'נשלחו הרבה הזמנות מהמכשיר הזה. נסו שוב בעוד שעה.' });
     const name = str(body.name, 60), phone = ilPhone(str(body.phone, 20));
@@ -719,6 +725,7 @@ export default async (req, context) => {
     } catch (e) { console.error('chat', e && e.message); return json(502, { error: 'הצ׳אט לא זמין כרגע. ' + fallback }); }
   }
   if (a === 'create' && req.method === 'POST') {
+    { const oc = await ordCfg(s); if (oc.off) return ordClosed(oc.msg); }
     const ck = await ipKey('rc:', ip); const cr = await rlGet(s, ck, CREATE_WIN);
     if (cr.n >= CREATE_MAX) { secLog('too many orders', ip, cr.n); return json(429, { error: 'נשלחו הרבה הזמנות מהמכשיר הזה. התקשרו אלינו או נסו שוב בעוד שעה.' }); }
     cr.n++; await s.setJSON(ck, cr);
@@ -1027,6 +1034,11 @@ export default async (req, context) => {
       await s.setJSON('slots-cfg', cfg); return json(200, { ok: true, cfg });
     }
     // ---------- התראות וואטסאפ: הגדרה ובדיקה ----------
+    if (a === 'admin-ordering') return json(200, await ordCfg(s));
+    if (a === 'admin-ordering-save' && req.method === 'POST') {
+      const c = { off: !!body.off, shop: !!body.shop, msg: str(body.msg, 200), at: Date.now() };
+      await s.setJSON('ord-cfg', c); console.warn('[admin] ordering', c.off ? 'OFF' : 'ON'); return json(200, { ok: true, ...c });
+    }
     if (a === 'admin-wa') {
       WA_CFG = null; const c = await waCfg(s);
       return json(200, { provider: WA_PROVIDER(), env: !!process.env.CALLMEBOT_KEY, to: WA_TO(), hasKey: !!CMB_KEY(), keyTail: CMB_KEY() ? CMB_KEY().slice(-2) : '' });

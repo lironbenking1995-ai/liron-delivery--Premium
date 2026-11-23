@@ -206,6 +206,16 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
 .tabbar a:nth-child(4n+1){--c:#b34700}.tabbar a:nth-child(4n+2){--c:#0055c4}.tabbar a:nth-child(4n+3){--c:#14703a}.tabbar a:nth-child(4n){--c:#6a1fc4}
 .tabbar a.on{color:var(--c)!important;background:color-mix(in srgb,var(--c) 12%,#fff)!important}
 .tabbar a.on svg{stroke:var(--c)}
+
+/* מתג קבלת הזמנות */
+.ogSw{display:flex;align-items:center;gap:12px;cursor:pointer;font-size:1.05rem}.ogSw input{position:absolute;opacity:0;width:1px;height:1px}
+.ogK{width:58px;height:32px;border-radius:99px;background:#d92d20;position:relative;flex:none;transition:background .2s}.ogK::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0004;transition:inset-inline-start .2s}
+.ogSw input:checked+.ogK{background:#1f9d55}.ogSw input:checked+.ogK::after{inset-inline-start:29px}.ogSw input:focus-visible+.ogK{outline:3px solid #0a84ff;outline-offset:2px}
+#ogCard.closed{border-color:#d92d20!important}
+#ogMsg,#waTo,#waKey{width:100%;height:46px;border-radius:12px;border:1px solid #0000002d;background:#f6f7f9;color:#000;padding:0 12px;font:inherit;font-size:.95rem;margin-top:4px}
+#ogCard .ogSw b{color:var(--cd,#14703a)}#ogCard.closed .ogSw b{color:#b42318}
+#ogCard{--c:#d92d20;--cd:#b42318}
+#ogSt.unpaid{color:#b42318!important;background:#fde7e4!important}#ogSt.paid{color:#14703a!important;background:#e3f6ea!important}
 </style></head>
 <body>
 <header class="top">
@@ -474,6 +484,15 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
   <!-- ===== מפתח: לוח ניהול ===== -->
   <section data-view="dev" hidden>
     <div class="ord-h"><div><h1>לוח ניהול</h1><div class="muted small" id="dWho"></div></div><button type="button" class="btn ghost" id="devOut" style="min-height:38px;padding:0 12px;font-size:.85rem">התנתקות</button></div>
+    <div class="card" id="ogCard"><div class="ord-h"><h2 style="margin:0">🚦 קבלת הזמנות</h2><span class="badge" id="ogSt">…</span></div>
+      <p class="muted small" style="margin:6px 0 10px">כשמכבים, אי אפשר להזמין משלוח חדש באתר ובאפליקציה. הלקוחות רואים את ההודעה שכתבת. הזמנות שכבר נכנסו ממשיכות כרגיל.</p>
+      <label class="ogSw" for="ogOn"><input type="checkbox" id="ogOn" role="switch"><span class="ogK" aria-hidden="true"></span><b id="ogLbl">מקבלים הזמנות</b></label>
+      <label class="small" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ogShop"> לסגור גם את ההזמנות מהחנות</label>
+      <label class="small" for="ogMsg" style="margin-top:8px;display:block">ההודעה שהלקוחות יראו כשסגור (לא חובה)</label>
+      <input id="ogMsg" maxlength="200" placeholder="כרגע לא מקבלים הזמנות חדשות באתר. אפשר לחזור מאוחר יותר או לשלוח הודעה בוואטסאפ.">
+      <div class="acts" style="margin-top:10px"><button type="button" class="btn primary" id="ogSave">שמירה</button></div>
+      <p class="err" id="ogErr" role="alert"></p>
+    </div>
     <div class="card gold" id="tkCard"><div class="ord-h"><h2 style="margin:0">📍 מעקב משלוחים</h2><span class="badge" id="tkN"></span></div>
       <p class="muted small" style="margin:6px 0 0">איפה כל משלוח נמצא, מי השליח ואיך ליצור איתו קשר. לחיצה על "פרטי מעקב" מראה את כל המסלול ואת המיקום בכל שלב.</p>
       <div class="seg" role="tablist" id="tkSeg"><button type="button" class="on" data-tf="live">בדרך עכשיו</button><button type="button" data-tf="today">היום</button><button type="button" data-tf="all">כולם</button></div>
@@ -1018,6 +1037,10 @@ $('rvAdm').addEventListener('click',function(e){var b=e.target.closest('button[d
   if(act==='del'&&!it._sure){it._sure=1;b.textContent='לחצו שוב למחיקה סופית';setTimeout(function(){it._sure=0;b.textContent='🗑 מחיקה'},4000);return;}
   var body={id:id};if(act==='ok'||act==='hide')body.st=act;if(act==='del')body.del=true;if(act==='savereply')body.reply=it.querySelector('textarea').value.trim();
   b.disabled=true;devApi('a=admin-review-set',body).then(function(){toast(act==='ok'?'הביקורת פורסמה באתר':act==='hide'?'הביקורת הוסתרה':act==='del'?'הביקורת נמחקה':'התגובה נשמרה');loadReviews(true);}).catch(function(er){b.disabled=false;toast(er.message);});});
+function ogDraw(c){$('ogOn').checked=!c.off;$('ogShop').checked=!!c.shop;$('ogLbl').textContent=c.off?'ההזמנות סגורות':'מקבלים הזמנות';$('ogSt').textContent=c.off?'⏸ סגור':'✅ פתוח';$('ogSt').className='badge '+(c.off?'unpaid':'paid');$('ogCard').classList.toggle('closed',!!c.off);}
+function loadOg(){devApi('a=admin-ordering').then(function(c){ogDraw(c);if(!$('ogMsg').value)$('ogMsg').value=c.msg||'';}).catch(function(){});}
+function ogSave(){var b=$('ogSave');b.disabled=true;$('ogErr').textContent='';devApi('a=admin-ordering-save',{off:!$('ogOn').checked,shop:$('ogShop').checked,msg:$('ogMsg').value.trim()}).then(function(c){b.disabled=false;ogDraw(c);toast(c.off?'ההזמנות נסגרו':'ההזמנות נפתחו');}).catch(function(e){b.disabled=false;$('ogErr').textContent=e.message;loadOg();});}
+$('ogOn').addEventListener('change',ogSave);$('ogSave').addEventListener('click',ogSave);
 function loadWa(){devApi('a=admin-wa').then(function(j){$('waSt').textContent=j.provider?'✅ פעיל':'לא מחובר';$('waSt').className='badge '+(j.provider?'paid':'unpaid');if(!$('waTo').value)$('waTo').value=j.to||'';$('waKeyHint').textContent=j.hasKey?(j.env?'(מוגדר ב-Netlify)':'(שמור · מסתיים ב-'+j.keyTail+')'):'';}).catch(function(){});}
 $('waSave').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-save',{to:$('waTo').value.trim(),key:$('waKey').value.trim()}).then(function(){b.disabled=false;$('waKey').value='';toast('ההגדרות נשמרו');loadWa();}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
 $('waTest').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-test',{}).then(function(){b.disabled=false;toast('נשלחה הודעת בדיקה. בדקו את הוואטסאפ');}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
@@ -1086,7 +1109,7 @@ function renderDev(){
     var pts=[];cs.forEach(function(x){var l=x.loc;if(l&&fresh(l)){var ll=[l.lat,l.lng];pts.push(ll);if(dmks[x.id])dmks[x.id].setLatLng(ll);else{dmks[x.id]=L.marker(ll,{icon:truckIcon(),title:x.name}).bindTooltip(x.name,{permanent:true,direction:'top',offset:[0,-22]}).addTo(dmap);}}else if(dmks[x.id]){dmap.removeLayer(dmks[x.id]);delete dmks[x.id];}});
     if(pts.length&&!dmap._fitDone){if(pts.length===1)dmap.setView(pts[0],13);else dmap.fitBounds(pts,{padding:[40,40]});dmap._fitDone=true;}}
   $('dLive').hidden=!sharingN;$('dLocNote').textContent=sharingN?cs.filter(function(x){return fresh(x.loc)}).map(function(x){return x.name+': עודכן '+ago(x.loc.at)}).join(' · '):'אף שליח לא משתף מיקום כרגע.';
-  renderCouriers();renderTrackBoard();loadReviews();if(!window._waL){window._waL=1;loadWa();}if(!window._bzL){window._bzL=1;loadLeads();}
+  renderCouriers();renderTrackBoard();loadReviews();if(!window._waL){window._waL=1;loadWa();loadOg();}if(!window._bzL){window._bzL=1;loadLeads();}
   renderDevList();
 }
 function loadMgrs(){devApi('a=admin-managers').then(function(j){var box=$('mgrList');box.textContent='';(j.managers||[]).forEach(function(m){var d=document.createElement('div');d.className='dord';
@@ -1355,5 +1378,5 @@ apply()})();
 })();
 </script>
 <!-- ===== סוף נגישות ===== -->
-</body>
+<script id="ordGate">(function(T){function go(){fetch("/.netlify/functions/app-api?a=ordering",{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(!j||(T.shop?j.shop!==false:j.open!==false))return;var st=document.createElement("style");st.textContent=".ordOff{margin:12px 0;padding:16px 18px;border-radius:16px;background:#fff4f2;border:1.5px solid #f3b4ab;color:#7a1d12;font:inherit;line-height:1.55;text-align:start}.ordOff b{display:block;font-size:1.08rem;margin-bottom:4px;color:#b42318}.ordOff a{color:#0b6b2e;font-weight:800}";document.head.appendChild(st);var put=0;T.sel.forEach(function(s){var els=document.querySelectorAll(s);if(!els.length)return;if(T.each||!put++){var n=document.createElement("div");n.className="ordOff";n.setAttribute("role","status");n.innerHTML="<b>ההזמנות סגורות כרגע</b><span></span><br><a href=\"https://wa.me/972525068475\" target=\"_blank\" rel=\"noopener\">💬 לשליחת הודעה בוואטסאפ</a>";n.querySelector("span").textContent=j.msg||"";els[0].parentNode.insertBefore(n,els[0])}els.forEach(function(el){el.style.setProperty("display","none","important");el.setAttribute("aria-hidden","true")})});document.documentElement.classList.add("ordersOff")}).catch(function(){})}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",go):go()})({"sel": ["[data-p=\"new\"] > *"], "shop": false, "each": false});</script></body>
 </html>
