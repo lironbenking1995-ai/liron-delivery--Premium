@@ -507,7 +507,60 @@ details{border:1px solid var(--vln);border-radius:18px;background:var(--vs1);mar
 .az .price-grid{margin-top:0}
 .pc-from{font-size:.5em;opacity:.8;margin-inline-end:4px;-webkit-text-fill-color:#59595e}
 .az .price-note{margin-top:22px;color:#646468;font-size:.9rem;line-height:1.7}
-</style></head><body><div id="lsplash" aria-hidden="true"><style>
+</style><!--LIGHTSKIP--><style id="colorful">/* ===== צבעוני לכל אזור ===== */
+#route{--a1:#0a84ff;--a2:#5ac8fa;--t1:#0055c4;--t2:#007a99;--tint:#eef6ff}
+#guides{--a1:#9b51e0;--a2:#ff4fa3;--t1:#6a1fc4;--t2:#c2185b;--tint:#f7f0ff}
+#app{--a1:#ff7a00;--a2:#ffc400;--t1:#b34700;--t2:#a35c00;--tint:#fff5ea}
+#highlights{--a1:#00b894;--a2:#0a84ff;--t1:#00745c;--t2:#0055c4;--tint:#ecfbf6}
+#how{--a1:#00b3b3;--a2:#34c759;--t1:#006e6e;--t2:#1d7a35;--tint:#eafafa}
+#services{--a1:#22b35e;--a2:#9bd100;--t1:#14703a;--t2:#4f6e00;--tint:#effaf3}
+#food{--a1:#ff4d3a;--a2:#ff9f0a;--t1:#b8281a;--t2:#a14f00;--tint:#fff2ef}
+#reviews{--a1:#ff2d78;--a2:#ff9f0a;--t1:#c2185b;--t2:#a14f00;--tint:#fff1f6}
+#lead{--a1:#5b5bff;--a2:#00b4ff;--t1:#3535c9;--t2:#006aa3;--tint:#f0f1ff}
+#about{--a1:#ff9f0a;--a2:#ff4d3a;--t1:#a35400;--t2:#b8281a;--tint:#fff8ec}
+#areas{--a1:#00a6c7;--a2:#0a84ff;--t1:#006b80;--t2:#0055c4;--tint:#ebf8fb}
+#calc{--a1:#9b51e0;--a2:#5b5bff;--t1:#6a1fc4;--t2:#3535c9;--tint:#f6f1ff}
+#quick{--a1:#25d366;--a2:#00a884;--t1:#0d7a3e;--t2:#00705a;--tint:#edfbf2}
+#order{--a1:#0a84ff;--a2:#9b51e0;--t1:#0055c4;--t2:#6a1fc4;--tint:#eff5ff}
+:is(#route,#guides,#app,#highlights,#how,#services,#food,#reviews,#lead,#about,#areas,#calc,#quick,#order){position:relative;isolation:isolate;background:
+ radial-gradient(60% 55% at 92% 0%,color-mix(in srgb,var(--a1) 16%,transparent),transparent 70%),
+ radial-gradient(55% 50% at 4% 100%,color-mix(in srgb,var(--a2) 14%,transparent),transparent 70%),var(--tint)!important}
+:is(#route,#guides,#app,#highlights,#how,#services,#food,#reviews,#lead,#about,#areas,#calc,#quick,#order) h2 span:not(.gt){background:linear-gradient(90deg,var(--t1),var(--t2))!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;-webkit-text-fill-color:transparent!important}
+:is(#route,#guides,#app,#highlights,#how,#services,#food,#reviews,#lead,#about,#areas,#calc,#quick,#order) :is(.lb,.section-label,.lq-lbl,.k,.nw,.kick){color:var(--t1)!important}
+:is(#route,#guides,#how,#reviews,#lead) .lb,:is(#services,#food,#about,#areas,#order) .section-label{display:inline-block;padding:6px 14px;border-radius:99px;background:color-mix(in srgb,var(--a1) 14%,#fff)!important;border:1px solid color-mix(in srgb,var(--a1) 30%,transparent)}
+#route .lb{background:#fff!important}
+#app .nw{background:linear-gradient(90deg,var(--t1),var(--t2))!important;color:#fff!important}
+/* כרטיסים: מסגרת ונגיעת צבע */
+:is(#guides .cd,#services .card,#reviews .c,#lead form,#areas .price-card,#calc .lq-card,#quick .lq-card,#how .vw,#route .vw){border:1.5px solid color-mix(in srgb,var(--a1) 28%,transparent)!important;box-shadow:0 24px 50px -32px color-mix(in srgb,var(--a1) 60%,transparent)!important}
+#guides .cd:nth-child(1){--a1:#ff9f0a}#guides .cd:nth-child(2){--a1:#1d1d1f}#guides .cd:nth-child(3){--a1:#9b51e0}
+#guides .cd .k{color:var(--t1)!important}
+#guides .cd .rd{color:var(--t1)}
+/* שירותים: כל כרטיס בצבע אחר */
+#services .card:nth-child(6n+1){--c:#0a84ff;--cd:#0055c4}#services .card:nth-child(6n+2){--c:#ff7a00;--cd:#b34700}#services .card:nth-child(6n+3){--c:#9b51e0;--cd:#6a1fc4}
+#services .card:nth-child(6n+4){--c:#22b35e;--cd:#14703a}#services .card:nth-child(6n+5){--c:#ff2d78;--cd:#c2185b}#services .card:nth-child(6n){--c:#00a6c7;--cd:#006b80}
+#services .card{border-top:5px solid var(--c)!important;background:linear-gradient(180deg,color-mix(in srgb,var(--c) 9%,#fff),#fff 55%)!important}
+#services .card .num{background:linear-gradient(135deg,var(--cd),var(--c))!important;color:#fff!important;-webkit-text-fill-color:#fff!important;-webkit-text-stroke:0!important}
+#services .card h3{color:var(--cd)!important}
+/* בנטו: כל אריח בגוון */
+#highlights .bt:nth-child(6n+1){background:linear-gradient(150deg,#e8f2ff,#fff)!important;border-color:#0a84ff40!important}
+#highlights .bt:nth-child(6n+2){background:linear-gradient(150deg,#fff1e3,#fff)!important;border-color:#ff7a0040!important}
+#highlights .bt:nth-child(6n+3){background:linear-gradient(150deg,#f3ebff,#fff)!important;border-color:#9b51e040!important}
+#highlights .bt:nth-child(6n+4){background:linear-gradient(150deg,#e6f9ef,#fff)!important;border-color:#22b35e40!important}
+#highlights .bt:nth-child(6n+5){background:linear-gradient(150deg,#ffe9f1,#fff)!important;border-color:#ff2d7840!important}
+#highlights .bt:nth-child(6n){background:linear-gradient(150deg,#e6f7fb,#fff)!important;border-color:#00a6c740!important}
+/* מחירון אזורים: כל כרטיס בצבע */
+#areas .price-card:nth-child(6n+1){--c:#22b35e}#areas .price-card:nth-child(6n+2){--c:#0a84ff}#areas .price-card:nth-child(6n+3){--c:#9b51e0}#areas .price-card:nth-child(6n+4){--c:#ff7a00}#areas .price-card:nth-child(6n+5){--c:#ff2d78}#areas .price-card:nth-child(6n){--c:#00a6c7}
+#areas .price-card{border-top:5px solid var(--c)!important}
+/* ההבטחה: טקסט בגרדיאנט צבעוני */
+.say .say-t{background:linear-gradient(90deg,#0055c4,#6a1fc4,#c2185b,#b34700);-webkit-background-clip:text;background-clip:text}
+/* כפתורי הפעלה ותגיות */
+#route .pts span,#how li b{border-color:color-mix(in srgb,var(--a1) 35%,transparent)!important}
+#how li b{background:linear-gradient(135deg,var(--t1),var(--t2))!important;color:#fff!important}
+#lead .tp button[aria-pressed=true]{background:color-mix(in srgb,var(--a1) 14%,#fff)!important;border-color:var(--a1)!important}
+#reviews .av{background:linear-gradient(135deg,var(--t1),var(--t2))!important;color:#fff!important}
+@media (prefers-contrast:more){:is(#route,#guides,#app,#highlights,#how,#services,#food,#reviews,#lead,#about,#areas,#calc,#quick,#order){background:#fff!important}}
+#order .ord-pane,#order .formgrid{border-color:color-mix(in srgb,var(--a1) 25%,transparent)!important}
+</style><!--/LIGHTSKIP--></head><body><div id="lsplash" aria-hidden="true"><style>
 #lsplash{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;background:#f1f1f4;transition:opacity .6s ease,visibility .6s}
 #lsplash::before{content:"";position:absolute;width:min(130vw,900px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#ffd12c6b 0%,#e3a70029 30%,#f7f7f500 62%);animation:lsGlow 2.4s ease-in-out infinite alternate}
 #lsplash.out{opacity:0;visibility:hidden}
