@@ -346,6 +346,14 @@ const newPin = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); 
 const CUST_RE = /^C\d{3,7}$/;
 const CUST_MAX = 10;                                     // עד 10 כרטיסים בשעה מאותה כתובת
 
+// ---------- משלוח VIP: מחיר קבוע להזמנה (לפני מע"מ) ----------
+const VIP_LOCAL = 70, VIP_OUT = 120; // בתוך אשקלון · מחוץ לאשקלון
+function vipQuote(fromCity, toCity) {
+  const fc = canon(fromCity), tc = canon(toCity);
+  if (!fc || !tc) return null;
+  const local = fc === LOCAL_CITY && tc === LOCAL_CITY, net = local ? VIP_LOCAL : VIP_OUT;
+  return { fc, tc, local, ...withVat(net) };
+}
 // ---------- תמחור אישי ללקוח (נקבע רק ע"י המנהל) ----------
 // mode: 'list' מחירון רגיל · 'fixed' מחיר קבוע לחבילה לפני מע"מ · 'percent' הנחה באחוזים מהמחירון
 function custRate(b) {
@@ -424,6 +432,29 @@ export default async (req, context) => {
     if (Number(req.headers.get('content-length') || 0) > 20000) return json(413, { error: 'בקשה גדולה מדי' });
     try { body = await req.json(); } catch { return json(400, { error: 'בקשה לא תקינה' }); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'בקשה לא תקינה' });
+  }
+
+  // ---------- ביקורות לקוחות: נשלחות לאישור המנהל ורק ביקורות מאושרות מוצגות ----------
+  if (a === 'reviews') {
+    const list = (await s.get('reviews', { type: 'json' })) || [];
+    const ok = list.filter(r => r.st === 'ok').sort((x, y) => y.at - x.at);
+    const n = ok.length, avg = n ? Math.round(ok.reduce((t, r) => t + r.stars, 0) / n * 10) / 10 : 0;
+    return json(200, { avg, n, reviews: ok.slice(0, 60).map(r => ({ id: r.id, name: r.name, city: r.city, stars: r.stars, text: r.text, at: r.at, reply: r.reply || '' })) });
+  }
+  if (a === 'review-add' && req.method === 'POST') {
+    if (str(body.website, 50)) return json(200, { ok: true }); // מלכודת לבוטים
+    const rk = await ipKey('rv:', ip); const rr = await rlGet(s, rk, 864e5);
+    if (rr.n >= 3) return json(429, { error: 'אפשר לשלוח עד 3 ביקורות ביום. תודה!' });
+    const name = str(body.name, 40), city = str(body.city, 30), text = str(body.text, 600), stars = Math.round(Number(body.stars));
+    if (name.length < 2) return json(400, { error: 'נא לכתוב שם (לפחות 2 אותיות)' });
+    if (!(stars >= 1 && stars <= 5)) return json(400, { error: 'נא לבחור דירוג בין 1 ל-5 כוכבים' });
+    if (text.length < 8) return json(400, { error: 'נא לכתוב כמה מילים על השירות' });
+    if (/https?:\/\/|www\./i.test(text + name)) return json(400, { error: 'בלי קישורים בביקורת, בבקשה' });
+    rr.n++; await s.setJSON(rk, rr);
+    const list = (await s.get('reviews', { type: 'json' })) || [];
+    list.unshift({ id: 'R' + Date.now().toString(36).toUpperCase() + rnd(2).toUpperCase(), name, city, stars, text, phone: phoneKey(body.phone).slice(0, 12), at: Date.now(), st: 'new' });
+    await s.setJSON('reviews', list.slice(0, 800));
+    return json(200, { ok: true });
   }
 
   // ---------- לקוח: יצירת הזמנה ----------
@@ -511,11 +542,18 @@ export default async (req, context) => {
       pay: { method: ['card', 'bit', 'cash'].includes(o.payMethod) ? o.payMethod : 'pending', paid: false, deal: null },
       assignedTo: null, courierName: null, courierPhone: null
     };
+    if (o.kind === 'VIP') {
+      const v = vipQuote(fromCity, toCity);
+      if (!v) return json(400, { error: 'משלוח VIP זמין בין יישובי אזור השירות. ליעד אחר כתבו לנו בוואטסאפ.' });
+      order.pkg.kind = 'VIP'; order.vip = true;
+      order.price = { total: v.total, net: v.net, vat: v.vat, vatRate: v.vatRate, extra: 0, agreed: false, vip: true, text: (v.total % 1 ? v.total.toFixed(2) : v.total) + '₪ כולל מע"מ ' + v.vatRate + '% · VIP ' + (v.local ? 'בתוך אשקלון' : 'מחוץ לאשקלון') };
+      order.extra = 0; order.extraTxt = '';
+    }
     if (/^C\d{3,7}$/.test(String(o.custId || ''))) {
       const cu = await s.get('cust:' + o.custId, { type: 'json' });
       if (cu && same(cu.token, String(o.custToken || ''))) {
         order.custId = cu.id; order.customer.custName = cu.name; order.customer.biz = cu.biz || '';
-        if (cu.rate && cu.rate.mode !== 'list') {
+        if (!order.vip && cu.rate && cu.rate.mode !== 'list') {
           const q = quoteFor({ fromCity, toCity, pkgs: o.pkgs, kind: o.kind }, cu.rate);
           if (q.state === 'ok') { order.price = { total: q.total, net: q.net, vat: q.vat, vatRate: q.vatRate, extra: q.extra || 0, agreed: false, custom: true, rate: q.rateTxt, text: (q.total % 1 ? q.total.toFixed(2) : q.total) + '₪ כולל מע"מ ' + q.vatRate + '% · מחיר מוסכם' }; order.extra = q.extra || 0; }
         }
@@ -708,6 +746,23 @@ export default async (req, context) => {
     if (!role) { await sleep(400); return json(401, { error: 'צריך להתחבר מחדש' }); }
     // ניהול קודי מנהל: רק למפתח
     if (a.startsWith('admin-manager') && role.role !== 'dev') return json(403, { error: 'רק המפתח יכול לנהל קודי מנהל' });
+    // ---------- ביקורות: אישור, הסתרה, תגובה ומחיקה ----------
+    if (a === 'admin-reviews') {
+      const list = (await s.get('reviews', { type: 'json' })) || [];
+      return json(200, { reviews: list.slice(0, 400) });
+    }
+    if (a === 'admin-review-set' && req.method === 'POST') {
+      const id = String(body.id || ''); if (!/^R[A-Z0-9]{6,16}$/.test(id)) return json(400, { error: 'ביקורת לא תקינה' });
+      const list = (await s.get('reviews', { type: 'json' })) || [];
+      const i = list.findIndex(r => r.id === id); if (i < 0) return json(404, { error: 'הביקורת לא נמצאה' });
+      if (body.del) { list.splice(i, 1); secLog('review deleted', ip, id + ' by ' + role.name); }
+      else {
+        if (['ok', 'hide', 'new'].includes(body.st)) list[i].st = body.st;
+        if (typeof body.reply === 'string') list[i].reply = str(body.reply, 400);
+        list[i].by = role.name; list[i].upd = Date.now();
+      }
+      await s.setJSON('reviews', list); return json(200, { ok: true });
+    }
     // ---------- כרטיסי לקוחות ----------
     if (a === 'admin-customers') {
       const idx = (await s.get('custIdx', { type: 'json' })) || [];

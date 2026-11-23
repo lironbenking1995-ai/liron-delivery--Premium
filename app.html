@@ -155,7 +155,15 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
 .ratebadge{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:99px;background:#ffd12c1f;border:1px solid #ffd12c66;color:var(--gold);font-size:.75rem;font-weight:800}
 .myrate{display:flex;gap:10px;align-items:center;margin:12px 0 0;padding:12px 14px;border-radius:14px;background:linear-gradient(120deg,#2a2208,#14120a);border:1px solid #ffd12c80;box-shadow:0 0 22px #ffd12c22;font-weight:800;font-size:.92rem}
 .myrate small{display:block;font-weight:500;color:#cfc6a0;font-size:.8rem}.lhero{text-align:center;margin:6px 0 4px}.lhero .lic{width:74px;height:74px;margin:0 auto 6px;border-radius:50%;display:grid;place-items:center;font-size:2rem;background:radial-gradient(circle at 35% 30%,#3a2e08,#14120a);border:1.5px solid var(--gold);box-shadow:0 0 30px #ffd12c55}
-.pinbox{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:12px 14px;border-radius:14px;background:#ffd12c12;border:1px dashed #ffd12c80}.pinbox b{font:900 1.4rem ui-monospace,Consolas,monospace;letter-spacing:.25em;color:var(--gold);direction:ltr}</style>
+.pinbox{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:12px 14px;border-radius:14px;background:#ffd12c12;border:1px dashed #ffd12c80}.pinbox b{font:900 1.4rem ui-monospace,Consolas,monospace;letter-spacing:.25em;color:var(--gold);direction:ltr}.rvi{padding:12px 0;border-top:1px solid #ffffff14}.rvi:first-child{border-top:0}.rvi .dtools .btn{min-height:40px;padding:0 12px;font-size:.88rem}
+[data-view]:not([hidden]){animation:vin .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes vin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.netbar{position:fixed;top:0;inset-inline:0;z-index:9999;padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;background:#ff6b6b;color:#0a0a0a;font-weight:800;text-align:center;font-size:.92rem;transform:translateY(-100%);transition:transform .3s}
+.netbar.on{transform:none}.netbar.ok{background:#5ee08a}
+.tabbar a{transition:color .2s,transform .15s}.tabbar a:active{transform:scale(.92)}
+.btn{transition:transform .15s,filter .15s}.btn:active{transform:scale(.97)}
+@media(prefers-reduced-motion:reduce){[data-view]:not([hidden]){animation:none}.netbar{transition:none}.tabbar a:active,.btn:active{transform:none}}
+</style>
 </head>
 <body>
 <header class="top">
@@ -462,6 +470,10 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
       <div id="cuDone"></div>
       <div class="dtools"><input id="cuSearch" type="search" placeholder="חיפוש: שם, טלפון, עסק, עיר, מספר לקוח" aria-label="חיפוש לקוחות"></div>
       <div id="cuList"></div></div>
+    <div class="card gold" id="rvCard"><div class="ord-h"><h2 style="margin:0">⭐ ביקורות מהאתר</h2><span class="badge" id="rvN"></span></div>
+      <p class="muted small" style="margin:6px 0 0">ביקורות שלקוחות השאירו באתר. ביקורת מופיעה באתר רק אחרי "אישור ופרסום". מומלץ לאשר גם ביקורות ביקורתיות (בלי קללות או פרטים אישיים) ולהגיב עליהן, זה בונה אמון.</p>
+      <div class="seg" role="tablist" id="rvSeg"><button type="button" class="on" data-rf="new">ממתינות</button><button type="button" data-rf="ok">מפורסמות</button><button type="button" data-rf="hide">מוסתרות</button></div>
+      <div id="rvAdm"></div></div>
     <div class="card"><h2>כל ההזמנות</h2>
       <div class="dtools"><input id="dSearch" type="search" placeholder="חיפוש: מספר, שם, טלפון, עיר" aria-label="חיפוש הזמנות">
       <select id="dFilter" aria-label="סינון לפי סטטוס"><option value="">כל הסטטוסים</option><option value="new">התקבלה</option><option value="assigned">שובץ שליח</option><option value="picked">נאסף</option><option value="transit">בדרך ליעד</option><option value="delivered">נמסר</option><option value="cancelled">בוטל</option><option value="unpaid">לא שולם</option></select></div>
@@ -880,6 +892,24 @@ var dData={orders:[],couriers:[],sys:{}},dmap=null,dmks={};
 function money(n){return (Math.round((n||0)*100)/100).toLocaleString('he-IL')+' ₪';}
 function loadDev(){var r=LS.get('drole',{role:'dev',name:'מפתח'});$('dWho').textContent=r.role==='dev'?'מחובר כמפתח':'מחובר: '+r.name+' · מנהל';$('mgrCard').hidden=r.role!=='dev';if(r.role==='dev')loadMgrs();
   devApi('a=admin-list').then(function(j){dData=j;renderDev();$('dUpd').textContent='עודכן '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}).catch(function(e){if(e.status===401){LS.del('dtok');route();}else $('dUpd').textContent='אין חיבור לשרת. מנסים שוב…';});}
+var rvF='new',rvAll=[],rvAt=0;
+function loadReviews(force){if(!force&&Date.now()-rvAt<60000)return;rvAt=Date.now();devApi('a=admin-reviews').then(function(j){rvAll=j.reviews||[];renderReviews();}).catch(function(){});}
+function renderReviews(){var n=rvAll.filter(function(r){return r.st==='new'}).length;$('rvN').textContent=n?n+' ממתינות':'';
+  var L=rvAll.filter(function(r){return r.st===rvF}),box=$('rvAdm');
+  if(!L.length){box.innerHTML='<p class="muted small" style="margin:12px 0 0">'+(rvF==='new'?'אין ביקורות שממתינות לאישור 👌':rvF==='ok'?'עוד אין ביקורות מפורסמות.':'אין ביקורות מוסתרות.')+'</p>';return;}
+  box.innerHTML=L.map(function(r){var s='';for(var i=1;i<=5;i++)s+=i<=r.stars?'★':'☆';
+    return '<div class="rvi" data-id="'+esc(r.id)+'"><div class="ord-h"><b>'+esc(r.name)+(r.city?' · '+esc(r.city):'')+'</b><span style="color:#ffd12c;letter-spacing:1px" aria-label="'+r.stars+' כוכבים">'+s+'</span></div>'+
+    '<p style="margin:6px 0">'+esc(r.text)+'</p><div class="muted small">'+new Date(r.at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'})+(r.phone?' · <a href="tel:'+esc(r.phone)+'">'+esc(r.phone)+'</a>':'')+'</div>'+
+    (r.reply?'<p class="small" style="margin:6px 0 0;color:#ffd12c">↩ התגובה שלך: '+esc(r.reply)+'</p>':'')+
+    '<div class="dtools" style="margin-top:8px">'+(r.st!=='ok'?'<button type="button" class="btn primary" data-ra="ok">✅ אישור ופרסום</button>':'')+(r.st!=='hide'?'<button type="button" class="btn ghost" data-ra="hide">🙈 הסתרה</button>':'')+
+    '<button type="button" class="btn ghost" data-ra="reply">💬 תגובה</button><button type="button" class="btn ghost" data-ra="del" style="color:#ff6b6b">🗑 מחיקה</button></div>'+
+    '<div class="rvr" hidden><label class="small">התגובה שתופיע מתחת לביקורת<textarea maxlength="400" rows="2" style="width:100%">'+esc(r.reply||'')+'</textarea></label><button type="button" class="btn primary block" data-ra="savereply">שמירת התגובה</button></div></div>';}).join('');}
+$('rvSeg').addEventListener('click',function(e){var b=e.target.closest('button[data-rf]');if(!b)return;rvF=b.getAttribute('data-rf');[].forEach.call(this.children,function(x){x.classList.toggle('on',x===b)});renderReviews();});
+$('rvAdm').addEventListener('click',function(e){var b=e.target.closest('button[data-ra]');if(!b)return;var it=b.closest('.rvi'),id=it.getAttribute('data-id'),act=b.getAttribute('data-ra');
+  if(act==='reply'){var rb=it.querySelector('.rvr');rb.hidden=!rb.hidden;if(!rb.hidden)rb.querySelector('textarea').focus();return;}
+  if(act==='del'&&!it._sure){it._sure=1;b.textContent='לחצו שוב למחיקה סופית';setTimeout(function(){it._sure=0;b.textContent='🗑 מחיקה'},4000);return;}
+  var body={id:id};if(act==='ok'||act==='hide')body.st=act;if(act==='del')body.del=true;if(act==='savereply')body.reply=it.querySelector('textarea').value.trim();
+  b.disabled=true;devApi('a=admin-review-set',body).then(function(){toast(act==='ok'?'הביקורת פורסמה באתר':act==='hide'?'הביקורת הוסתרה':act==='del'?'הביקורת נמחקה':'התגובה נשמרה');loadReviews(true);}).catch(function(er){b.disabled=false;toast(er.message);});});
 function renderDev(){
   var os=dData.orders||[],now=new Date(),d0=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime(),m0=new Date(now.getFullYear(),now.getMonth(),1).getTime();
   var live=os.filter(function(o){return o.status!=='cancelled'});
@@ -896,7 +926,7 @@ function renderDev(){
     var pts=[];cs.forEach(function(x){var l=x.loc;if(l&&fresh(l)){var ll=[l.lat,l.lng];pts.push(ll);if(dmks[x.id])dmks[x.id].setLatLng(ll);else{dmks[x.id]=L.marker(ll,{icon:truckIcon(),title:x.name}).bindTooltip(x.name,{permanent:true,direction:'top',offset:[0,-22]}).addTo(dmap);}}else if(dmks[x.id]){dmap.removeLayer(dmks[x.id]);delete dmks[x.id];}});
     if(pts.length&&!dmap._fitDone){if(pts.length===1)dmap.setView(pts[0],13);else dmap.fitBounds(pts,{padding:[40,40]});dmap._fitDone=true;}}
   $('dLive').hidden=!sharingN;$('dLocNote').textContent=sharingN?cs.filter(function(x){return fresh(x.loc)}).map(function(x){return x.name+': עודכן '+ago(x.loc.at)}).join(' · '):'אף שליח לא משתף מיקום כרגע.';
-  renderCouriers();renderTrack();
+  renderCouriers();renderTrack();loadReviews();
   renderDevList();
 }
 function loadMgrs(){devApi('a=admin-managers').then(function(j){var box=$('mgrList');box.textContent='';(j.managers||[]).forEach(function(m){var d=document.createElement('div');d.className='dord';
@@ -1152,6 +1182,14 @@ d.addEventListener('touchmove',function(e){if(S.guide&&e.touches[0])guide.style.
 var m=d.querySelector('main')||d.querySelector('[role=main]'),sk=d.getElementById('a11ySkip');if(m&&!m.id)m.id='main';if(!m){if(sk)sk.remove()}else if(sk){sk.href='#'+m.id;d.body.insertBefore(sk,d.body.firstChild);sk.addEventListener('click',function(e){e.preventDefault();m.focus();m.scrollIntoView()})}
 if(m&&!m.hasAttribute('tabindex'))m.setAttribute('tabindex','-1');
 apply()})();
+
+(function(){var nb=document.createElement('div');nb.className='netbar';nb.setAttribute('role','status');document.body.appendChild(nb);
+ function off(){nb.className='netbar on';nb.textContent='📡 אין חיבור לאינטרנט. ננסה שוב אוטומטית.'}
+ function on(){nb.className='netbar on ok';nb.textContent='✅ החיבור חזר';setTimeout(function(){nb.className='netbar'},1800)}
+ addEventListener('offline',off);addEventListener('online',on);if(navigator.onLine===false)off();
+ document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.tabbar a,.btn.primary')&&navigator.vibrate)try{navigator.vibrate(8)}catch(x){}},true);
+ if('serviceWorker' in navigator&&location.protocol==='https:')addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});
+})();
 </script>
 <!-- ===== סוף נגישות ===== -->
 </body>

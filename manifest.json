@@ -1,17 +1,26 @@
 {
-  "name": "לירון משלוחים",
+  "id": "/app.html",
+  "name": "לירון משלוחים מהיום למחר",
   "short_name": "לירון משלוחים",
-  "description": "הזמנת משלוח, מעקב חי אחרי השליח ואפליקציית שליח",
+  "description": "הזמנת משלוח, מעקב חי אחרי השליח, כרטיס לקוח ואפליקציית שליח",
   "lang": "he",
   "dir": "rtl",
-  "start_url": "/app.html",
+  "start_url": "/app.html?src=app",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#080a0d",
   "theme_color": "#080a0d",
+  "categories": ["business", "shopping", "lifestyle"],
   "icons": [
-    { "src": "/IMG_4754.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/IMG_4753.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/IMG_4754.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/IMG_4753.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/IMG_4753.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "הזמנת משלוח", "short_name": "הזמנה", "url": "/order.html", "icons": [{ "src": "/IMG_4754.png", "sizes": "192x192" }] },
+    { "name": "מעקב אחרי משלוח", "short_name": "מעקב", "url": "/app.html#/my", "icons": [{ "src": "/IMG_4754.png", "sizes": "192x192" }] },
+    { "name": "כניסת שליח", "short_name": "שליח", "url": "/app.html#/courier", "icons": [{ "src": "/IMG_4754.png", "sizes": "192x192" }] }
   ]
 }

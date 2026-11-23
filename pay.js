@@ -89,9 +89,10 @@ export default async (req) => {
     if (saved) o = { ...o, fromCity: saved.from.city, toCity: saved.to.city, qty: saved.pkg.qty, size: saved.pkg.size, kind: saved.pkg.kind, extra: saved.extra };
   }
   // מחיר קבוע מחושב בשרת. אם המחיר בתיאום, הלקוח מזין את הסכום שסוכם (עד 10,000 ₪).
-  let p = price(o), agreed = false;
+  let p = saved && saved.vip ? null : price(o), agreed = false;
   // לקוח עם תמחור אישי: מחייבים בדיוק את המחיר המוסכם שנשמר בהזמנה בשרת
-  if (saved && saved.price && saved.price.custom && Number(saved.price.total) > 0) p = { total: Number(saved.price.total), net: saved.price.net, vat: saved.price.vat };
+  if (saved && saved.price && (saved.price.custom || saved.price.vip) && Number(saved.price.total) > 0) p = { total: Number(saved.price.total), net: saved.price.net, vat: saved.price.vat };
+  if (saved && saved.vip && !p) return json(400, { error: 'לא נמצא מחיר להזמנת ה-VIP. נסו שוב או כתבו לנו בוואטסאפ.' });
   if (p && p.needExtra) return json(400, { error: 'בחרו תוספת לאזור רמלה-לוד (בכפולות של 10 ₪).' });
   if (!p) {
     const a = Math.round(Number(o.agreed) * 100) / 100;
@@ -104,7 +105,7 @@ export default async (req) => {
   const site = process.env.URL || new URL(req.url).origin;
   const ref = saved ? saved.id : 'P' + Date.now().toString(36).toUpperCase();
   console.log('pay link', ref, p.total, agreed ? 'agreed-by-customer' : 'fixed');
-  const desc = `${saved && saved.price && saved.price.custom ? 'מחיר מוסכם · ' : ''}${agreed ? 'סכום מתואם · ' : ''}משלוח ${o.size || ''} · ${norm(o.fromCity)} ← ${norm(o.toCity)} · כולל מע"מ ${VAT_RATE}%`.slice(0, 200);
+  const desc = `${saved && saved.vip ? 'משלוח VIP · ' : ''}${saved && saved.price && saved.price.custom ? 'מחיר מוסכם · ' : ''}${agreed ? 'סכום מתואם · ' : ''}משלוח ${o.size || ''} · ${norm(o.fromCity)} ← ${norm(o.toCity)} · כולל מע"מ ${VAT_RATE}%`.slice(0, 200);
 
   const body = {
     TerminalNumber: terminal,
@@ -116,7 +117,7 @@ export default async (req) => {
     ISOCoinId: 1,
     Language: 'he',
     SuccessRedirectUrl: `${site}/thanks.html?ref=${ref}${o.back === 'app' ? '&back=app' : ''}`,
-    FailedRedirectUrl: o.back === 'app' ? `${site}/app.html?pay=failed#/card` : o.back === 'order' ? `${site}/order.html?pay=failed` : `${site}/index.html?pay=failed#order`,
+    FailedRedirectUrl: o.back === 'vip' ? `${site}/index.html?pay=failed#vip` : o.back === 'app' ? `${site}/app.html?pay=failed#/card` : o.back === 'order' ? `${site}/order.html?pay=failed` : `${site}/index.html?pay=failed#order`,
     WebHookUrl: `${site}/.netlify/functions/verify`,
     AdvancedDefinition: {
       MinNumOfPayments: 1,
