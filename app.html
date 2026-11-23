@@ -163,6 +163,8 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
 .tabbar a{transition:color .2s,transform .15s}.tabbar a:active{transform:scale(.92)}
 .btn{transition:transform .15s,filter .15s}.btn:active{transform:scale(.97)}
 @media(prefers-reduced-motion:reduce){[data-view]:not([hidden]){animation:none}.netbar{transition:none}.tabbar a:active,.btn:active{transform:none}}
+.cwm{position:fixed;inset:-40%;z-index:50;pointer-events:none;display:flex;flex-wrap:wrap;gap:70px 50px;align-content:center;justify-content:center;transform:rotate(-24deg);opacity:.085;font-weight:900;font-size:15px;color:#fff;user-select:none;-webkit-user-select:none}
+.cwm span{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -403,6 +405,7 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
       <p class="muted small" style="margin:10px 0 0">כדי שהמיקום יתעדכן, השאירו את האפליקציה פתוחה על המסך בזמן הנסיעה.</p>
     </div>
     <div class="seg" role="tablist"><button type="button" class="on" data-f="active">פעילים <span id="cA"></span></button><button type="button" data-f="new">חדשים <span id="cN"></span></button><button type="button" data-f="done">הושלמו</button></div>
+    <p class="muted small" style="margin:0 2px 10px">🔒 לשמירה על פרטיות הלקוחות, טלפונים וכתובות מוסתרים חלקית. החיוג, הוואטסאפ והניווט עובדים כרגיל, ומספר הבית מופיע כשמגיע תורו של היעד.</p>
     <div id="cList"></div>
     <p class="muted small" id="cUpd" style="text-align:center;margin-top:12px"></p>
   </section>
@@ -555,7 +558,7 @@ function setMode(m){mode=m;LS.set('appMode',m);$('modeBtn').textContent=m==='cou
 $('modeBtn').addEventListener('click',function(){if(mode==='courier'){setMode('customer');location.hash='#/';}else{setMode('courier');location.hash='#/courier';}});
 function show(v){document.querySelectorAll('[data-view]').forEach(function(s){s.hidden=s.getAttribute('data-view')!==v});document.querySelectorAll('.tabbar a').forEach(function(a){a.classList.toggle('on',a.getAttribute('data-tab')===v||(v==='track'&&a.getAttribute('data-tab')==='my'))});window.scrollTo(0,0);}
 function route(){
-  clearTimers();$('tabbar').hidden=mode==='courier';var h=location.hash.replace(/^#\/?/,'');var parts=h.split('/');
+  clearTimers();courierWatermark(false);$('tabbar').hidden=mode==='courier';var h=location.hash.replace(/^#\/?/,'');var parts=h.split('/');
   if(parts[0]==='track'&&parts[1]){setMode(mode==='courier'?'courier':'customer');show('track');openTrack(parts[1]);return;}
   if(parts[0]==='devorder'&&parts[1]){$('tabbar').hidden=true;if(!LS.get('dtok',null)){location.hash='#/dev';return;}show('devorder');openDevOrder(parts[1]);return;}
   if(parts[0]==='dev'){$('tabbar').hidden=true;if(!LS.get('dtok',null)){show('devlogin');setTimeout(function(){$('devIn').focus()},50);return;}show('dev');loadDev();loadCusts();timers.push(setInterval(loadDev,20000));return;}
@@ -831,7 +834,19 @@ function loadCourier(){var tok=LS.get('ctok',null);if(!tok)return;api('a=list&n=
   if(knownNew){var fresh=nw.filter(function(id){return knownNew.indexOf(id)<0});if(fresh.length){ding();if(navigator.vibrate)navigator.vibrate([200,100,200]);toast(fresh.length===1?'🔔 משלוח חדש נכנס!':'🔔 '+fresh.length+' משלוחים חדשים נכנסו!');}}
   knownNew=nw;renderCourier();$('cUpd').textContent='עודכן '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}).catch(function(e){if(e.status===401){LS.del('ctok');LS.del('cme');toast('צריך להתחבר מחדש');route();}else $('cUpd').textContent='אין חיבור לשרת. מנסים שוב…';});}
 var NEXT={new:['assigned','לקחתי את המשלוח'],assigned:['picked','נאסף'],picked:['transit','בדרך ליעד'],transit:['delivered','נמסר ✓']};
+/* ---------- פרטיות במסך השליח: הסתרה חלקית + סימן מים ---------- */
+function maskPhone(ph){var d=String(ph||'').replace(/\D/g,'');if(d.length<7)return d?'•••':'';return d.slice(0,3)+'-•••-••'+d.slice(-2);}
+function streetOnly(s){return String(s||'').replace(/\s+\d+\s*[א-תa-zA-Z]?(\s*[\/\-]\s*\d+)?\s*$/,'').trim();}
+function shortName(n){n=String(n||'').trim().split(/\s+/);return n[0]+(n[1]?' '+n[1].charAt(0)+'׳':'');}
+function cAddr(p,level){if(level==='full')return addr(p)+(p.floor?' · קומה '+p.floor:'')+(p.apt?' · דירה '+p.apt:'');if(level==='street')return [streetOnly(p.street),p.city].filter(Boolean).join(', ')+' · 🔒 מספר בית יוצג בהמשך';return (p.city||'')+' · 🔒';}
+function cLevels(st){if(st==='new')return {from:'street',to:'city'};if(st==='assigned')return {from:'full',to:'street'};if(st==='picked'||st==='transit')return {from:'street',to:'full'};return {from:'city',to:'city'};}
+var wmT=null;function courierWatermark(on){var w=$('cWm');if(!on){if(w)w.hidden=true;clearInterval(wmT);wmT=null;return;}
+  if(!w){w=document.createElement('div');w.id='cWm';w.className='cwm';w.setAttribute('aria-hidden','true');document.body.appendChild(w);}
+  function draw(){var me=LS.get('cme',{})||{};var ph=String(me.phone||'').replace(/\D/g,'');var s=(me.name||'שליח')+(ph?' · '+ph.slice(-4):'')+' · '+new Date().toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    var h='';for(var i=0;i<40;i++)h+='<span>'+esc(s)+'</span>';w.innerHTML=h;}
+  draw();w.hidden=false;if(!wmT)wmT=setInterval(draw,60000);}
 function renderCourier(){
+  courierWatermark(true);
   var act=orders.filter(function(o){return ['assigned','picked','transit'].indexOf(o.status)>=0}),nw=orders.filter(function(o){return o.status==='new'}),dn=orders.filter(function(o){return o.status==='delivered'||o.status==='cancelled'});
   $('cA').textContent=act.length?'('+act.length+')':'';$('cN').textContent=nw.length?'('+nw.length+')':'';
   var list=filter==='active'?act:filter==='new'?nw:dn.slice(0,40);var box=$('cList');box.textContent='';
@@ -839,21 +854,21 @@ function renderCourier(){
   list.forEach(function(o){
     var c=document.createElement('article');c.className='card'+(o.status==='new'?' gold':'');
     var pickup=o.status==='new'||o.status==='assigned';var target=pickup?o.from:o.to;
-    var price=o.price&&o.price.text||'בתיאום';
+    var price=o.price&&o.price.text||'בתיאום';var lv=cLevels(o.status),done=o.status==='delivered'||o.status==='cancelled';
     c.innerHTML='<div class="ord-h"><b>'+esc(o.id)+'</b><span><span class="badge '+o.status+'">'+ST[o.status]+'</span> <span class="badge '+(o.pay.paid?'paid':'unpaid')+'">'+(o.pay.paid?'שולם':'לא שולם')+'</span></span></div>'+
-      '<div class="route"><div><i class="a">א</i><span>'+esc(addr(o.from))+(o.from.floor?' · קומה '+esc(o.from.floor):'')+(o.from.apt?' · דירה '+esc(o.from.apt):'')+'</span></div><div><i class="b">מ</i><span>'+esc(addr(o.to))+(o.to.floor?' · קומה '+esc(o.to.floor):'')+(o.to.apt?' · דירה '+esc(o.to.apt):'')+'</span></div></div>'+
+      '<div class="route"><div><i class="a">א</i><span>'+esc(cAddr(o.from,lv.from))+'</span></div><div><i class="b">מ</i><span>'+esc(cAddr(o.to,lv.to))+'</span></div></div>'+
       '<div class="kv"><div><span>חבילה</span><b>'+esc((o.pkg.mix||((o.pkg.qty||1)+' · '+(o.pkg.size||'')))+(o.pkg.care&&o.pkg.care!=='רגיל'?' · '+o.pkg.care:''))+'</b></div>'+
       (o.extra?'<div><span>תוספת רמלה-לוד</span><b>+'+o.extra+'₪ · '+esc(o.extraTxt)+'</b></div>':'')+
-      '<div><span>מחיר</span><b>'+esc(price)+'</b></div><div><span>לקוח</span><b>'+esc(o.customer.name)+' · '+esc(o.customer.phone)+'</b></div>'+
-      (o.customer.receiver?'<div><span>מקבל</span><b>'+esc(o.customer.receiver)+'</b></div>':'')+
+      '<div><span>מחיר</span><b>'+esc(price)+'</b></div><div><span>לקוח</span><b>'+esc(done?shortName(o.customer.name):o.customer.name)+' · <bdi dir="ltr">'+esc(maskPhone(o.customer.phone))+'</bdi></b></div>'+
+      (o.customer.receiver?'<div><span>מקבל</span><b>'+esc(done?shortName(o.customer.receiver):o.customer.receiver)+'</b></div>':'')+
       ((o.schedule.date||o.schedule.window)?'<div><span>מועד איסוף</span><b>'+esc([fmtD(o.schedule.date),o.schedule.window].filter(Boolean).join(' · '))+'</b></div>':'')+
       (o.notes?'<div><span>הערות</span><b>'+esc(o.notes)+'</b></div>':'')+'</div>';
     var acts=document.createElement('div');acts.className='acts';
     if(NEXT[o.status]){var nb=document.createElement('button');nb.type='button';nb.className='btn primary';nb.textContent=NEXT[o.status][1];nb.addEventListener('click',function(){setStatus(o,NEXT[o.status][0],nb)});acts.appendChild(nb);}
     if(o.status!=='delivered'&&o.status!=='cancelled'){var nv=document.createElement('a');nv.className='btn ghost';nv.href=waze(addr(target));nv.target='_blank';nv.rel='noopener';nv.textContent=pickup?'ניווט לאיסוף':'ניווט למסירה';acts.appendChild(nv);}
-    var call=document.createElement('a');call.className='btn ghost';call.href='tel:'+String(o.customer.phone).replace(/[^\d+]/g,'');call.textContent='☎ ללקוח';acts.appendChild(call);
+    if(!done){var call=document.createElement('a');call.className='btn ghost';call.href='tel:'+String(o.customer.phone).replace(/[^\d+]/g,'');call.textContent='☎ ללקוח';acts.appendChild(call);
     var wa=document.createElement('a');wa.className='btn ghost';wa.target='_blank';wa.rel='noopener';var link=location.origin+'/app.html#/track/'+o.id+'.'+o.token;
-    wa.href='https://wa.me/'+waNum(o.customer.phone)+'?text='+encodeURIComponent('שלום '+o.customer.name+', כאן לירון משלוחים. אפשר לעקוב אחרי המשלוח שלך בזמן אמת כאן: '+link);wa.textContent='שליחת קישור מעקב';acts.appendChild(wa);
+    wa.href='https://wa.me/'+waNum(o.customer.phone)+'?text='+encodeURIComponent('שלום '+o.customer.name+', כאן לירון משלוחים. אפשר לעקוב אחרי המשלוח שלך בזמן אמת כאן: '+link);wa.textContent='שליחת קישור מעקב';acts.appendChild(wa);}
     if(!o.pay.paid){var pb=document.createElement('button');pb.type='button';pb.className='btn ok';pb.textContent='סמן כשולם';pb.addEventListener('click',function(){markPaid(o,pb)});acts.appendChild(pb);}
     if(o.status==='new'||o.status==='assigned'){var cb=document.createElement('button');cb.type='button';cb.className='btn bad';cb.textContent='ביטול';cb.addEventListener('click',function(){if(confirmBox(c,'לבטל את המשלוח '+o.id+'?',function(){setStatus(o,'cancelled',cb)}))return;});acts.appendChild(cb);}
     c.appendChild(acts);box.appendChild(c);
