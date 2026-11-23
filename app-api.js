@@ -325,6 +325,7 @@ async function slotRelease(s, o) {
 // ---- הפעלה / כיבוי של קבלת הזמנות ----
 const ORD_MSG = 'כרגע לא מקבלים הזמנות חדשות באתר. אפשר לחזור מאוחר יותר או לשלוח הודעה בוואטסאפ.';
 async function ordCfg(s) { const c = (await s.get('ord-cfg', { type: 'json' })) || {}; return { off: !!c.off, shop: !!c.shop, msg: c.msg || '' }; }
+async function courCfg(s) { const c = (await s.get('courier-cfg', { type: 'json' })) || {}; return { noCancel: !!c.noCancel }; }
 const ordClosed = msg => json(503, { error: msg || ORD_MSG, closed: true });
 // ---- קופונים ----
 // קופונים שמוגדרים מראש. כל אחד נוסף פעם אחת בלבד, ואחר כך אפשר לערוך או למחוק אותו מהניהול.
@@ -1035,6 +1036,8 @@ export default async (req, context) => {
     }
     // ---------- התראות וואטסאפ: הגדרה ובדיקה ----------
     if (a === 'admin-ordering') return json(200, await ordCfg(s));
+    if (a === 'admin-courier-cfg') return json(200, await courCfg(s));
+    if (a === 'admin-courier-cfg-save' && req.method === 'POST') { const c = { noCancel: !!body.noCancel, at: Date.now() }; await s.setJSON('courier-cfg', c); console.warn('[admin] courier cancel', c.noCancel ? 'BLOCKED' : 'allowed'); return json(200, { ok: true, ...c }); }
     if (a === 'admin-ordering-save' && req.method === 'POST') {
       const c = { off: !!body.off, shop: !!body.shop, msg: str(body.msg, 200), at: Date.now() };
       await s.setJSON('ord-cfg', c); console.warn('[admin] ordering', c.off ? 'OFF' : 'ON'); return json(200, { ok: true, ...c });
@@ -1294,7 +1297,8 @@ export default async (req, context) => {
     let orders = await readOrders(s, limit);
     // שליח רואה משלוחים חדשים שעוד לא נלקחו, ואת המשלוחים שלו
     if (!me.admin) orders = orders.filter(o => o.status === 'new' || o.assignedTo === me.id || (!o.assignedTo && me.id === 'main' && o.status !== 'new'));
-    return json(200, { orders: orders.map(slim), me: { id: me.id, name: me.name, phone: me.phone }, loc: await locOf(s, me.admin ? 'main' : me.id) });
+    const cc = await courCfg(s);
+    return json(200, { orders: orders.map(slim), canCancel: me.admin || me.id === 'main' || !cc.noCancel, me: { id: me.id, name: me.name, phone: me.phone }, loc: await locOf(s, me.admin ? 'main' : me.id) });
   }
 
   const loadMine = async (id) => {
@@ -1308,6 +1312,7 @@ export default async (req, context) => {
     const st = str(body.status, 20);
     if (!STATUSES.includes(st)) return json(400, { error: 'סטטוס לא תקין' });
     const [o, err] = await loadMine(str(body.id, 20)); if (err) return err;
+    if (st === 'cancelled' && !me.admin && me.id !== 'main' && (await courCfg(s)).noCancel) return json(403, { error: 'ביטול משלוחים נחסם על ידי המנהל. אם צריך לבטל, פנו ללירון.' });
     if (!me.admin) {
       const owner = o.assignedTo || (o.status !== 'new' ? 'main' : null);
       if (o.status === 'new') {

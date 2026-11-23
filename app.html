@@ -505,7 +505,7 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
         <div class="dedit"><label>שם המנהל<input id="nmName" maxlength="40"></label><label>קוד (6 עד 12 ספרות)<input id="nmCode" inputmode="numeric" maxlength="12" autocomplete="off"></label></div>
         <button type="button" class="btn ghost block" id="nmGen" style="margin-top:8px">🎲 יצירת קוד אקראי</button>
         <p class="err" id="nmErr" role="alert"></p><button type="button" class="btn primary block" id="nmSave">שמירת הקוד</button></details></div>
-    <div class="card"><h2>שליחים</h2><p class="muted small" style="margin:0 0 6px">כל שליח נכנס לאפליקציה עם הטלפון והקוד האישי שלו, ורואה מיד את המשלוחים החדשים ואת שלו. לירון נכנס עם קוד השליח הראשי. כל שליח נכנס רק עם הקוד האישי שלו, בלי טלפון.</p><div id="dCour"></div>
+    <div class="card"><h2>שליחים</h2><p class="muted small" style="margin:0 0 6px">כל שליח נכנס לאפליקציה עם הטלפון והקוד האישי שלו, ורואה מיד את המשלוחים החדשים ואת שלו. לירון נכנס עם קוד השליח הראשי. כל שליח נכנס רק עם הקוד האישי שלו, בלי טלפון.</p><label class="ogSw" for="ncNoCan" style="margin:4px 0 12px"><input type="checkbox" id="ncNoCan" role="switch"><span class="ogK" aria-hidden="true"></span><b id="ncNoCanL">שליחים יכולים לבטל משלוחים</b></label><div id="dCour"></div>
       <details class="help" id="cAddBox"><summary>➕ הוספת שליח</summary>
         <div class="dedit"><label>שם<input id="ncName" maxlength="40"></label><label>טלפון (לא חובה)<input id="ncPhone" type="tel" inputmode="tel" maxlength="20"></label><label class="full">קוד אישי (נוצר אוטומטית, אפשר לשנות)<input id="ncCode" inputmode="numeric" maxlength="12" autocomplete="off"></label></div>
         <button type="button" class="btn ghost block" id="ncGen" style="margin-top:8px">🎲 קוד אקראי אחר</button>
@@ -937,7 +937,7 @@ var knownNew=null,actx=null;
 function unlockAudio(){try{if(!actx){var C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C();}if(actx&&actx.state==='suspended')actx.resume();}catch(e){}}
 document.addEventListener('click',unlockAudio,{once:true});
 function ding(){try{unlockAudio();if(!actx)return;[0,0.22].forEach(function(t){var o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=880;g.gain.setValueAtTime(0.0001,actx.currentTime+t);g.gain.exponentialRampToValueAtTime(0.35,actx.currentTime+t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+t+0.18);o.connect(g);g.connect(actx.destination);o.start(actx.currentTime+t);o.stop(actx.currentTime+t+0.2);});}catch(e){}}
-function loadCourier(){var tok=LS.get('ctok',null);if(!tok)return;api('a=list&n=150',null,tok).then(function(j){orders=j.orders||[];if(j.me){LS.set('cme',j.me);$('cHello').textContent='שלום '+j.me.name;}
+function loadCourier(){var tok=LS.get('ctok',null);if(!tok)return;api('a=list&n=150',null,tok).then(function(j){orders=j.orders||[];window.C_CAN=j.canCancel!==false;if(j.me){LS.set('cme',j.me);$('cHello').textContent='שלום '+j.me.name;}
   var nw=orders.filter(function(o){return o.status==='new'}).map(function(o){return o.id});
   if(knownNew){var fresh=nw.filter(function(id){return knownNew.indexOf(id)<0});if(fresh.length){ding();if(navigator.vibrate)navigator.vibrate([200,100,200]);toast(fresh.length===1?'🔔 משלוח חדש נכנס!':'🔔 '+fresh.length+' משלוחים חדשים נכנסו!');}}
   knownNew=nw;renderCourier();$('cUpd').textContent='עודכן '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}).catch(function(e){if(e.status===401){LS.del('ctok');LS.del('cme');toast('צריך להתחבר מחדש');route();}else $('cUpd').textContent='אין חיבור לשרת. מנסים שוב…';});}
@@ -978,7 +978,7 @@ function renderCourier(){
     var wa=document.createElement('a');wa.className='btn ghost';wa.target='_blank';wa.rel='noopener';var link=location.origin+'/app.html#/track/'+o.id+'.'+o.token;
     wa.href='https://wa.me/'+waNum(o.customer.phone)+'?text='+encodeURIComponent('שלום '+o.customer.name+', כאן לירון משלוחים. אפשר לעקוב אחרי המשלוח שלך בזמן אמת כאן: '+link);wa.textContent='שליחת קישור מעקב';acts.appendChild(wa);}
     if(!o.pay.paid){var pb=document.createElement('button');pb.type='button';pb.className='btn ok';pb.textContent='סמן כשולם';pb.addEventListener('click',function(){markPaid(o,pb)});acts.appendChild(pb);}
-    if(o.status==='new'||o.status==='assigned'){var cb=document.createElement('button');cb.type='button';cb.className='btn bad';cb.textContent='ביטול';cb.addEventListener('click',function(){if(confirmBox(c,'לבטל את המשלוח '+o.id+'?',function(){setStatus(o,'cancelled',cb)}))return;});acts.appendChild(cb);}
+    if((o.status==='new'||o.status==='assigned')&&window.C_CAN!==false){var cb=document.createElement('button');cb.type='button';cb.className='btn bad';cb.textContent='ביטול';cb.addEventListener('click',function(){if(confirmBox(c,'לבטל את המשלוח '+o.id+'?',function(){setStatus(o,'cancelled',cb)}))return;});acts.appendChild(cb);}
     c.appendChild(acts);box.appendChild(c);
   });
 }
@@ -1038,6 +1038,9 @@ $('rvAdm').addEventListener('click',function(e){var b=e.target.closest('button[d
   var body={id:id};if(act==='ok'||act==='hide')body.st=act;if(act==='del')body.del=true;if(act==='savereply')body.reply=it.querySelector('textarea').value.trim();
   b.disabled=true;devApi('a=admin-review-set',body).then(function(){toast(act==='ok'?'הביקורת פורסמה באתר':act==='hide'?'הביקורת הוסתרה':act==='del'?'הביקורת נמחקה':'התגובה נשמרה');loadReviews(true);}).catch(function(er){b.disabled=false;toast(er.message);});});
 function ogDraw(c){$('ogOn').checked=!c.off;$('ogShop').checked=!!c.shop;$('ogLbl').textContent=c.off?'ההזמנות סגורות':'מקבלים הזמנות';$('ogSt').textContent=c.off?'⏸ סגור':'✅ פתוח';$('ogSt').className='badge '+(c.off?'unpaid':'paid');$('ogCard').classList.toggle('closed',!!c.off);}
+function ncDraw(c){$('ncNoCan').checked=!c.noCancel;$('ncNoCanL').textContent=c.noCancel?'ביטול משלוחים חסום לשליחים':'שליחים יכולים לבטל משלוחים';}
+function loadNc(){devApi('a=admin-courier-cfg').then(ncDraw).catch(function(){});}
+$('ncNoCan').addEventListener('change',function(){var el=this;el.disabled=true;devApi('a=admin-courier-cfg-save',{noCancel:!el.checked}).then(function(c){el.disabled=false;ncDraw(c);toast(c.noCancel?'השליחים לא יכולים לבטל משלוחים':'השליחים יכולים לבטל שוב');}).catch(function(e){el.disabled=false;toast(e.message);loadNc();});});
 function loadOg(){devApi('a=admin-ordering').then(function(c){ogDraw(c);if(!$('ogMsg').value)$('ogMsg').value=c.msg||'';}).catch(function(){});}
 function ogSave(){var b=$('ogSave');b.disabled=true;$('ogErr').textContent='';devApi('a=admin-ordering-save',{off:!$('ogOn').checked,shop:$('ogShop').checked,msg:$('ogMsg').value.trim()}).then(function(c){b.disabled=false;ogDraw(c);toast(c.off?'ההזמנות נסגרו':'ההזמנות נפתחו');}).catch(function(e){b.disabled=false;$('ogErr').textContent=e.message;loadOg();});}
 $('ogOn').addEventListener('change',ogSave);$('ogSave').addEventListener('click',ogSave);
@@ -1109,7 +1112,7 @@ function renderDev(){
     var pts=[];cs.forEach(function(x){var l=x.loc;if(l&&fresh(l)){var ll=[l.lat,l.lng];pts.push(ll);if(dmks[x.id])dmks[x.id].setLatLng(ll);else{dmks[x.id]=L.marker(ll,{icon:truckIcon(),title:x.name}).bindTooltip(x.name,{permanent:true,direction:'top',offset:[0,-22]}).addTo(dmap);}}else if(dmks[x.id]){dmap.removeLayer(dmks[x.id]);delete dmks[x.id];}});
     if(pts.length&&!dmap._fitDone){if(pts.length===1)dmap.setView(pts[0],13);else dmap.fitBounds(pts,{padding:[40,40]});dmap._fitDone=true;}}
   $('dLive').hidden=!sharingN;$('dLocNote').textContent=sharingN?cs.filter(function(x){return fresh(x.loc)}).map(function(x){return x.name+': עודכן '+ago(x.loc.at)}).join(' · '):'אף שליח לא משתף מיקום כרגע.';
-  renderCouriers();renderTrackBoard();loadReviews();if(!window._waL){window._waL=1;loadWa();loadOg();}if(!window._bzL){window._bzL=1;loadLeads();}
+  renderCouriers();renderTrackBoard();loadReviews();if(!window._waL){window._waL=1;loadWa();loadOg();loadNc();}if(!window._bzL){window._bzL=1;loadLeads();}
   renderDevList();
 }
 function loadMgrs(){devApi('a=admin-managers').then(function(j){var box=$('mgrList');box.textContent='';(j.managers||[]).forEach(function(m){var d=document.createElement('div');d.className='dord';
