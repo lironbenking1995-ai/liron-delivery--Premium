@@ -241,7 +241,8 @@ async function otpCheck(phone, code) {
 // המספר שמקבל: WHATSAPP_TO, ואם לא הוגדר אז COURIER_PHONE, ואם גם הוא לא אז הנייד של העסק
 // הגדרות וואטסאפ: ממשתני Netlify, או מלוח הניהול באפליקציה (נשמר ב-Blobs, המפתח לא נשלח לדפדפן)
 let WA_CFG = null;
-async function waCfg(s) { if (WA_CFG) return WA_CFG; try { WA_CFG = (await (s || store()).get('wa-cfg', { type: 'json' })) || {}; } catch { WA_CFG = {}; } return WA_CFG; }
+let WA_AT = 0;
+async function waCfg(s) { if (WA_CFG && Date.now() - WA_AT < 60000) return WA_CFG; try { WA_CFG = (await (s || store()).get('wa-cfg', { type: 'json' })) || {}; } catch { WA_CFG = WA_CFG || {}; } WA_AT = Date.now(); return WA_CFG; }
 const WA_TO = () => ilPhone((WA_CFG && WA_CFG.to) || process.env.WHATSAPP_TO || process.env.COURIER_PHONE || '0525068475');
 const CMB_KEY = () => process.env.CALLMEBOT_KEY || (WA_CFG && WA_CFG.key) || '';
 const WA_PROVIDER = () => CMB_KEY() ? 'callmebot' : (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WA_FROM) ? 'twilio' : null;
@@ -697,6 +698,7 @@ export default async (req, context) => {
   if (a === 'reset-request' && req.method === 'POST') {
     // "שכחתי קוד": קוד חדש נשלח לוואטסאפ של העסק. הקוד הישן ממשיך לעבוד עד שמשתמשים בחדש.
     if (await isLocked(s, ip)) return tooMany();
+    await waCfg(s);
     if (!WA_PROVIDER()) return json(503, { error: 'איפוס דרך וואטסאפ עוד לא מחובר. פנו ללירון.' });
     const role = body.role === 'manager' ? 'manager' : 'courier', name = normName(str(body.name, 40));
     if (name.length < 2) return json(400, { error: 'הקלידו את השם שלכם כפי שרשום במערכת' });
@@ -770,7 +772,7 @@ export default async (req, context) => {
     if (a.startsWith('admin-manager') && role.role !== 'dev') return json(403, { error: 'רק המפתח יכול לנהל קודי מנהל' });
     // ---------- התראות וואטסאפ: הגדרה ובדיקה ----------
     if (a === 'admin-wa') {
-      const c = await waCfg(s);
+      WA_CFG = null; const c = await waCfg(s);
       return json(200, { provider: WA_PROVIDER(), env: !!process.env.CALLMEBOT_KEY, to: WA_TO(), hasKey: !!CMB_KEY(), keyTail: CMB_KEY() ? CMB_KEY().slice(-2) : '' });
     }
     if (a === 'admin-wa-save' && req.method === 'POST') {
@@ -779,7 +781,7 @@ export default async (req, context) => {
       if (key && !/^[A-Za-z0-9]{4,40}$/.test(key)) return json(400, { error: 'המפתח (APIKEY) לא תקין' });
       const c = { ...(await s.get('wa-cfg', { type: 'json' }) || {}) };
       if (key) c.key = key; if (body.clearKey) delete c.key; if (to) c.to = to;
-      await s.setJSON('wa-cfg', c); WA_CFG = c; secLog('wa settings changed', ip, role.name);
+      await s.setJSON('wa-cfg', c); WA_CFG = c; WA_AT = Date.now(); secLog('wa settings changed', ip, role.name);
       return json(200, { ok: true });
     }
     if (a === 'admin-wa-test' && req.method === 'POST') {
@@ -961,7 +963,8 @@ export default async (req, context) => {
       const list = await getCouriers(s);
       const all = [MAIN(), ...envCouriers(), ...list.filter(c => c.active !== false)];
       const sharing = (await Promise.all(all.map(c => locOf(s, c.id)))).filter(l => l && Date.now() - l.at < 10 * 60 * 1000).length;
-      checks.push({ key: 'wa', label: 'איפוס קודים לוואטסאפ', ...(WA_PROVIDER() ? { ok: true, detail: 'פעיל דרך ' + (WA_PROVIDER() === 'callmebot' ? 'CallMeBot' : 'Twilio') + ' · נשלח לנייד ' + maskPhone(WA_TO() || '0000000000') } : { ok: false, warn: true, detail: 'כבוי: עוד לא חובר שירות וואטסאפ, אז כפתור "שכחתי קוד" מבקש לפנות ללירון' }) });
+      await waCfg(s);
+      checks.push({ key: 'wa', label: 'וואטסאפ: התראות הזמנות ואיפוס קודים', ...(WA_PROVIDER() ? { ok: true, detail: 'פעיל דרך ' + (WA_PROVIDER() === 'callmebot' ? 'CallMeBot' : 'Twilio') + ' · נשלח לנייד ' + maskPhone(WA_TO() || '0000000000') } : { ok: false, warn: true, detail: 'כבוי: הדביקו מפתח CallMeBot בכרטיס "💬 התראות וואטסאפ" למטה. עד אז לא נשלחות התראות, ו"שכחתי קוד" מבקש לפנות ללירון' }) });
       checks.push({ key: 'sms', label: 'אימות SMS לשליחים', ...(OTP_ON() ? { ok: true, detail: 'פעיל דרך ' + (OTP_PROVIDER() === 'twilio' ? 'Twilio' : '019 SMS') + ' · קוד חדש בכל כניסה, חיבור בתוקף ' + OTP_SESSION_HOURS() + ' שעות' } : { ok: false, warn: true, detail: 'כבוי: עוד לא חוברה חברת SMS, ושליחים נכנסים עם הקוד האישי בלבד' }) });
       checks.push({ key: 'couriers', label: 'שליחים', ok: true, info: true, detail: all.length + ' שליחים פעילים · ' + (sharing ? sharing + ' משתפים מיקום עכשיו' : 'אף שליח לא משתף מיקום כרגע (תקין כשאין משלוח בדרך)') });
       return json(200, { checks, at: Date.now() });
