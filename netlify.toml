@@ -97,3 +97,8 @@
   [headers.values]
     Cache-Control = "no-cache"
 
+
+[[headers]]
+  for = "/*.mp4"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
