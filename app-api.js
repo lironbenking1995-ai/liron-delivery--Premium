@@ -239,12 +239,17 @@ async function otpCheck(phone, code) {
 // ---------- שליחת הודעה לוואטסאפ של העסק (לאיפוס קודים) ----------
 // CallMeBot (חינם, הודעות למספר שלך): CALLMEBOT_KEY. או Twilio WhatsApp: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WA_FROM
 // המספר שמקבל: WHATSAPP_TO, ואם לא הוגדר אז COURIER_PHONE, ואם גם הוא לא אז הנייד של העסק
-const WA_TO = () => ilPhone(process.env.WHATSAPP_TO || process.env.COURIER_PHONE || '0525068475');
-const WA_PROVIDER = () => process.env.CALLMEBOT_KEY ? 'callmebot' : (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WA_FROM) ? 'twilio' : null;
-async function waSend(text) {
+// הגדרות וואטסאפ: ממשתני Netlify, או מלוח הניהול באפליקציה (נשמר ב-Blobs, המפתח לא נשלח לדפדפן)
+let WA_CFG = null;
+async function waCfg(s) { if (WA_CFG) return WA_CFG; try { WA_CFG = (await (s || store()).get('wa-cfg', { type: 'json' })) || {}; } catch { WA_CFG = {}; } return WA_CFG; }
+const WA_TO = () => ilPhone((WA_CFG && WA_CFG.to) || process.env.WHATSAPP_TO || process.env.COURIER_PHONE || '0525068475');
+const CMB_KEY = () => process.env.CALLMEBOT_KEY || (WA_CFG && WA_CFG.key) || '';
+const WA_PROVIDER = () => CMB_KEY() ? 'callmebot' : (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WA_FROM) ? 'twilio' : null;
+async function waSend(text, s) {
+  await waCfg(s);
   const to = WA_TO(); if (!to) return false;
   if (WA_PROVIDER() === 'callmebot') {
-    const u = 'https://api.callmebot.com/whatsapp.php?phone=972' + to.slice(1) + '&text=' + encodeURIComponent(text) + '&apikey=' + encodeURIComponent(process.env.CALLMEBOT_KEY);
+    const u = 'https://api.callmebot.com/whatsapp.php?phone=972' + to.slice(1) + '&text=' + encodeURIComponent(text.slice(0, 1500)) + '&apikey=' + encodeURIComponent(CMB_KEY());
     const r = await fetch(u); const t = await r.text().catch(() => '');
     const ok = r.ok && !/error|invalid|not\s+(allowed|registered)|wrong/i.test(t);
     if (!ok) console.error('callmebot', r.status, t.replace(/<[^>]+>/g, ' ').slice(0, 200));
@@ -256,6 +261,22 @@ async function waSend(text) {
     return r.ok;
   }
   return false;
+}
+// שליחה ברקע עם מגבלת זמן, כדי שהלקוח לא יחכה
+const waBg = (text, s) => Promise.race([waSend(text, s).catch(e => { console.error('wa', e); return false; }), new Promise(r => setTimeout(() => r(false), 3500))]);
+const PAY_TXT = { card: 'אשראי', bit: 'bit', cash: 'מזומן', pending: 'לא נבחר' };
+function waOrderText(o, title, site) {
+  const p = o.price || {}, adr = x => [x.street, x.city].filter(Boolean).join(', ') + (x.floor ? ' · קומה ' + x.floor : '') + (x.apt ? ' · דירה ' + x.apt : '');
+  const money = p.total != null ? (p.total % 1 ? p.total.toFixed(2) : p.total) + '₪ כולל מע"מ' + (p.net != null ? ' (' + p.net + '₪ + מע"מ ' + (p.vat ?? '') + '₪)' : '') : 'בתיאום';
+  const dt = o.schedule && o.schedule.date ? String(o.schedule.date).replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1') : '';
+  const sch = [dt, o.schedule && o.schedule.window].filter(Boolean).join(' · ');
+  return [title, '🔖 ' + o.id + (o.vip ? ' · ⭐ VIP' : ''), o.custId ? '🪪 כרטיס ' + o.custId + (o.customer.biz ? ' (' + o.customer.biz + ')' : '') : null,
+    '👤 ' + o.customer.name + ' · ' + o.customer.phone, o.customer.receiver ? '🙋 מקבל: ' + o.customer.receiver : null, '',
+    '📦 ' + (o.pkg.mix || ((o.pkg.qty || 1) + ' × ' + (o.pkg.size || ''))) + (o.pkg.kind ? ' · ' + o.pkg.kind : '') + (o.pkg.care && o.pkg.care !== 'רגיל' ? ' · ' + o.pkg.care : ''),
+    '📍 איסוף: ' + adr(o.from), '🏁 מסירה: ' + adr(o.to), sch ? '🗓 ' + sch : null, o.notes ? '📝 ' + o.notes : null, '',
+    '💰 ' + money, '💳 תשלום: ' + (o.pay.paid ? '✅ שולם' : '⏳ ממתין') + ' · ' + (PAY_TXT[o.pay.method] || o.pay.method) + (o.pay.amount ? ' · ' + o.pay.amount + '₪' : ''),
+    '', '🔗 ' + (site || 'https://www.liron-delivery.com') + '/app.html#/devorder/' + o.id
+  ].filter(x => x !== null && x !== undefined && x !== false).join('\n').replace(/\n(?:\n)+/g, '\n\n').replace(/^\n+|\n+$/g, '');
 }
 const normName = n => String(n || '').replace(/\s+/g, ' ').trim().toLowerCase();
 async function makeCourierSession(s, cid, fp, otp) {
@@ -563,6 +584,7 @@ export default async (req, context) => {
     await s.setJSON('o:' + order.id, order);
     const idx = await readIdx(s); idx.unshift(order.id); await s.setJSON('idx', idx.slice(0, 1000));
     const site = process.env.URL || url.origin;
+    await waBg(waOrderText(order, '🆕 הזמנה חדשה באתר', site), s);
     return json(200, { id: order.id, token: order.token, trackUrl: `${site}/app.html#/track/${order.id}.${order.token}`, price: order.price });
   }
 
@@ -746,6 +768,24 @@ export default async (req, context) => {
     if (!role) { await sleep(400); return json(401, { error: 'צריך להתחבר מחדש' }); }
     // ניהול קודי מנהל: רק למפתח
     if (a.startsWith('admin-manager') && role.role !== 'dev') return json(403, { error: 'רק המפתח יכול לנהל קודי מנהל' });
+    // ---------- התראות וואטסאפ: הגדרה ובדיקה ----------
+    if (a === 'admin-wa') {
+      const c = await waCfg(s);
+      return json(200, { provider: WA_PROVIDER(), env: !!process.env.CALLMEBOT_KEY, to: WA_TO(), hasKey: !!CMB_KEY(), keyTail: CMB_KEY() ? CMB_KEY().slice(-2) : '' });
+    }
+    if (a === 'admin-wa-save' && req.method === 'POST') {
+      const key = str(body.key, 40).replace(/\s/g, ''), to = ilPhone(str(body.to, 20));
+      if (body.to && !to) return json(400, { error: 'מספר וואטסאפ לא תקין' });
+      if (key && !/^[A-Za-z0-9]{4,40}$/.test(key)) return json(400, { error: 'המפתח (APIKEY) לא תקין' });
+      const c = { ...(await s.get('wa-cfg', { type: 'json' }) || {}) };
+      if (key) c.key = key; if (body.clearKey) delete c.key; if (to) c.to = to;
+      await s.setJSON('wa-cfg', c); WA_CFG = c; secLog('wa settings changed', ip, role.name);
+      return json(200, { ok: true });
+    }
+    if (a === 'admin-wa-test' && req.method === 'POST') {
+      WA_CFG = null; const ok = await waSend('✅ בדיקה: התראות וואטסאפ מלירון משלוחים עובדות! מעכשיו כל הזמנה ותשלום יגיעו לכאן.', s);
+      return ok ? json(200, { ok: true }) : json(502, { error: WA_PROVIDER() ? 'השליחה נכשלה. בדקו את המפתח והמספר.' : 'עוד לא הוגדר מפתח CallMeBot.' });
+    }
     // ---------- ביקורות: אישור, הסתרה, תגובה ומחיקה ----------
     if (a === 'admin-reviews') {
       const list = (await s.get('reviews', { type: 'json' })) || [];
@@ -932,6 +972,7 @@ export default async (req, context) => {
       const o = await s.get('o:' + id, { type: 'json' });
       if (!o) return json(404, { error: 'לא נמצא' });
       if (body.status && STATUSES.includes(body.status) && body.status !== o.status) { o.status = body.status; o.history.push({ s: body.status, at: Date.now(), by: 'admin' }); }
+      const wasPaidA = !!o.pay.paid;
       if (typeof body.paid === 'boolean') o.pay.paid = body.paid;
       if (body.method && ['card', 'bit', 'cash', 'pending'].includes(body.method)) o.pay.method = body.method;
       if (body.total !== undefined && body.total !== null && body.total !== '') {
@@ -950,6 +991,7 @@ export default async (req, context) => {
       }
       if (typeof body.adminNote === 'string') o.adminNote = str(body.adminNote, 400);
       await s.setJSON('o:' + id, o);
+      if (o.pay.paid && !wasPaidA) await waBg(waOrderText(o, '💵 התקבל תשלום · סומן בניהול'), s);
       return json(200, { ok: true, order: slim(o) });
     }
     if (a === 'admin-delete' && req.method === 'POST') {
@@ -1011,8 +1053,10 @@ export default async (req, context) => {
   if (a === 'paid' && req.method === 'POST') {
     const [o, err] = await loadMine(str(body.id, 20)); if (err) return err;
     if (!me.admin && (o.assignedTo || (o.status !== 'new' ? 'main' : null)) !== me.id) return json(409, { error: 'אפשר לסמן תשלום רק במשלוח שלך' });
+    const wasPaid = !!o.pay.paid;
     o.pay.paid = !!body.paid; if (body.method && ['card', 'bit', 'cash'].includes(body.method)) o.pay.method = body.method;
     await s.setJSON('o:' + o.id, o);
+    if (o.pay.paid && !wasPaid) await waBg(waOrderText(o, '💵 התקבל תשלום · סומן ע"י ' + me.name), s);
     return json(200, { ok: true, order: slim(o) });
   }
 

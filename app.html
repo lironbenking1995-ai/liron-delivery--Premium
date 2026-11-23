@@ -474,6 +474,15 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
       <div id="cuDone"></div>
       <div class="dtools"><input id="cuSearch" type="search" placeholder="חיפוש: שם, טלפון, עסק, עיר, מספר לקוח" aria-label="חיפוש לקוחות"></div>
       <div id="cuList"></div></div>
+    <div class="card" id="waCard"><div class="ord-h"><h2 style="margin:0">💬 התראות וואטסאפ</h2><span class="badge" id="waSt">…</span></div>
+      <p class="muted small" style="margin:6px 0 10px">כל הזמנה חדשה וכל תשלום נשלחים אליך לוואטסאפ עם כל הפרטים: לקוח, כתובות, חבילה, מחיר ומצב התשלום.</p>
+      <label class="small" for="waTo">מספר הוואטסאפ שמקבל את ההתראות</label><input id="waTo" type="tel" inputmode="tel" dir="ltr" maxlength="14" autocomplete="off">
+      <label class="small" for="waKey" style="margin-top:8px;display:block">מפתח CallMeBot (APIKEY) <span class="muted" id="waKeyHint"></span></label><input id="waKey" type="password" dir="ltr" maxlength="40" autocomplete="off" placeholder="השאירו ריק כדי לא לשנות">
+      <div class="acts" style="margin-top:10px"><button type="button" class="btn primary" id="waSave">שמירה</button><button type="button" class="btn ghost" id="waTest">שליחת הודעת בדיקה</button></div>
+      <p class="err" id="waErr" role="alert"></p>
+      <details style="margin-top:6px"><summary class="small" style="cursor:pointer;font-weight:800">איך מקבלים מפתח CallMeBot (חינם, דקה אחת)</summary>
+      <ol class="small" style="margin:8px 0 0;padding-inline-start:20px;line-height:1.8"><li>שומרים באנשי הקשר את המספר של CallMeBot: <bdi dir="ltr">+34 621 331 709</bdi> (המספר מתחלף לפעמים, כדאי לוודא באתר callmebot.com).</li><li>שולחים לו בוואטסאפ, מהמספר שיקבל את ההתראות, את ההודעה: <bdi dir="ltr">I allow callmebot to send me messages</bdi></li><li>תוך דקה-שתיים מגיעה תשובה עם <b>APIKEY</b>. מעתיקים את המספר לשדה למעלה ולוחצים "שמירה", ואז "שליחת הודעת בדיקה".</li></ol></details>
+    </div>
     <div class="card gold" id="rvCard"><div class="ord-h"><h2 style="margin:0">⭐ ביקורות מהאתר</h2><span class="badge" id="rvN"></span></div>
       <p class="muted small" style="margin:6px 0 0">ביקורות שלקוחות השאירו באתר. ביקורת מופיעה באתר רק אחרי "אישור ופרסום". מומלץ לאשר גם ביקורות ביקורתיות (בלי קללות או פרטים אישיים) ולהגיב עליהן, זה בונה אמון.</p>
       <div class="seg" role="tablist" id="rvSeg"><button type="button" class="on" data-rf="new">ממתינות</button><button type="button" data-rf="ok">מפורסמות</button><button type="button" data-rf="hide">מוסתרות</button></div>
@@ -929,6 +938,9 @@ $('rvAdm').addEventListener('click',function(e){var b=e.target.closest('button[d
   if(act==='del'&&!it._sure){it._sure=1;b.textContent='לחצו שוב למחיקה סופית';setTimeout(function(){it._sure=0;b.textContent='🗑 מחיקה'},4000);return;}
   var body={id:id};if(act==='ok'||act==='hide')body.st=act;if(act==='del')body.del=true;if(act==='savereply')body.reply=it.querySelector('textarea').value.trim();
   b.disabled=true;devApi('a=admin-review-set',body).then(function(){toast(act==='ok'?'הביקורת פורסמה באתר':act==='hide'?'הביקורת הוסתרה':act==='del'?'הביקורת נמחקה':'התגובה נשמרה');loadReviews(true);}).catch(function(er){b.disabled=false;toast(er.message);});});
+function loadWa(){devApi('a=admin-wa').then(function(j){$('waSt').textContent=j.provider?'✅ פעיל':'לא מחובר';$('waSt').className='badge '+(j.provider?'paid':'unpaid');if(!$('waTo').value)$('waTo').value=j.to||'';$('waKeyHint').textContent=j.hasKey?(j.env?'(מוגדר ב-Netlify)':'(שמור · מסתיים ב-'+j.keyTail+')'):'';}).catch(function(){});}
+$('waSave').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-save',{to:$('waTo').value.trim(),key:$('waKey').value.trim()}).then(function(){b.disabled=false;$('waKey').value='';toast('ההגדרות נשמרו');loadWa();}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
+$('waTest').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-test',{}).then(function(){b.disabled=false;toast('נשלחה הודעת בדיקה. בדקו את הוואטסאפ');}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
 function renderDev(){
   var os=dData.orders||[],now=new Date(),d0=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime(),m0=new Date(now.getFullYear(),now.getMonth(),1).getTime();
   var live=os.filter(function(o){return o.status!=='cancelled'});
@@ -945,7 +957,7 @@ function renderDev(){
     var pts=[];cs.forEach(function(x){var l=x.loc;if(l&&fresh(l)){var ll=[l.lat,l.lng];pts.push(ll);if(dmks[x.id])dmks[x.id].setLatLng(ll);else{dmks[x.id]=L.marker(ll,{icon:truckIcon(),title:x.name}).bindTooltip(x.name,{permanent:true,direction:'top',offset:[0,-22]}).addTo(dmap);}}else if(dmks[x.id]){dmap.removeLayer(dmks[x.id]);delete dmks[x.id];}});
     if(pts.length&&!dmap._fitDone){if(pts.length===1)dmap.setView(pts[0],13);else dmap.fitBounds(pts,{padding:[40,40]});dmap._fitDone=true;}}
   $('dLive').hidden=!sharingN;$('dLocNote').textContent=sharingN?cs.filter(function(x){return fresh(x.loc)}).map(function(x){return x.name+': עודכן '+ago(x.loc.at)}).join(' · '):'אף שליח לא משתף מיקום כרגע.';
-  renderCouriers();renderTrackBoard();loadReviews();
+  renderCouriers();renderTrackBoard();loadReviews();if(!window._waL){window._waL=1;loadWa();}
   renderDevList();
 }
 function loadMgrs(){devApi('a=admin-managers').then(function(j){var box=$('mgrList');box.textContent='';(j.managers||[]).forEach(function(m){var d=document.createElement('div');d.className='dord';
