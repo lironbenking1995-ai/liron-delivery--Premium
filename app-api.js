@@ -323,10 +323,23 @@ async function slotRelease(s, o) {
   o.schedule.released = true;
 }
 // ---- קופונים ----
+// קופונים שמוגדרים מראש. כל אחד נוסף פעם אחת בלבד, ואחר כך אפשר לערוך או למחוק אותו מהניהול.
+const SEED_COUPONS = [
+  { code: 'VIP120', type: 'pct', value: 5, title: 'קופון הצטרפות: 5% הנחה בהזמנה מ-150 ₪', min: 150, maxUses: 0, expires: '', scope: 'all', onePerPhone: true, active: true }
+];
+async function getCoupons(s) {
+  const list = (await s.get('coupons', { type: 'json' })) || [];
+  const done = (await s.get('coupon-seeds', { type: 'json' })) || [];
+  const add = SEED_COUPONS.filter(c => !done.includes(c.code));
+  if (!add.length) return list;
+  for (const c of add) if (!list.some(x => x.code === c.code)) list.push({ ...c, uses: 0, created: Date.now() });
+  await s.setJSON('coupons', list); await s.setJSON('coupon-seeds', done.concat(add.map(c => c.code)));
+  return list;
+}
 const normCode = c => String(c || '').trim().toUpperCase().replace(/[^A-Z0-9א-ת_-]/g, '').slice(0, 24);
 async function couponFor(s, code, amount, scope, phone) {
   code = normCode(code); if (!code) return null;
-  const list = (await s.get('coupons', { type: 'json' })) || [];
+  const list = (await getCoupons(s));
   const c = list.find(x => x.code === code);
   if (!c || c.active === false) return { error: 'קוד הקופון לא קיים או לא פעיל' };
   if (c.expires && ilNow().date > c.expires) return { error: 'תוקף הקופון הסתיים' };
@@ -334,15 +347,15 @@ async function couponFor(s, code, amount, scope, phone) {
   if (c.scope && c.scope !== 'all' && c.scope !== scope) return { error: c.scope === 'shop' ? 'הקופון הזה מיועד לחנות בלבד' : 'הקופון הזה מיועד להזמנת משלוח בלבד' };
   if (!(amount > 0)) return { error: 'אי אפשר להחיל קופון על מחיר בתיאום' };
   if (c.min && amount < c.min) return { error: 'הקופון תקף מהזמנה של ' + moneyTxt(c.min) + ' ומעלה' };
-  const ph = String(phone || '').replace(/\D/g, '');
+  const ph = String(phone || '').replace(/\D/g, '').replace(/^972/, '0');
   if (c.onePerPhone && ph && (c.usedBy || []).includes((await sha('cp:' + ph)).slice(0, 16))) return { error: 'כבר השתמשתם בקופון הזה' };
   let off = c.type === 'pct' ? r2s(amount * Math.min(100, c.value) / 100) : Math.min(c.value, amount);
   off = Math.min(off, r2s(amount - 1)); if (off <= 0) return { error: 'הקופון לא מתאים לסכום הזה' };
   return { ok: true, code: c.code, off: r2s(off), label: c.type === 'pct' ? c.value + '% הנחה' : moneyTxt(c.value) + ' הנחה', title: c.title || '' };
 }
 async function couponUse(s, code, phone) {
-  const list = (await s.get('coupons', { type: 'json' })) || []; const c = list.find(x => x.code === code); if (!c) return;
-  c.uses = (c.uses || 0) + 1; const ph = String(phone || '').replace(/\D/g, '');
+  const list = (await getCoupons(s)); const c = list.find(x => x.code === code); if (!c) return;
+  c.uses = (c.uses || 0) + 1; const ph = String(phone || '').replace(/\D/g, '').replace(/^972/, '0');
   if (c.onePerPhone && ph) { c.usedBy = c.usedBy || []; c.usedBy.push((await sha('cp:' + ph)).slice(0, 16)); c.usedBy = c.usedBy.slice(-2000); }
   await s.setJSON('coupons', list);
 }
@@ -965,18 +978,18 @@ export default async (req, context) => {
       await s.setJSON('leads', list); return json(200, { ok: true });
     }
     // ---------- קופונים ----------
-    if (a === 'admin-coupons') return json(200, { coupons: ((await s.get('coupons', { type: 'json' })) || []).map(({ usedBy, ...c }) => c) });
+    if (a === 'admin-coupons') return json(200, { coupons: ((await getCoupons(s))).map(({ usedBy, ...c }) => c) });
     if (a === 'admin-coupon-save' && req.method === 'POST') {
       const code = normCode(body.code); if (code.length < 3) return json(400, { error: 'קוד של 3 תווים לפחות (אותיות/ספרות)' });
       const type = body.type === 'fixed' ? 'fixed' : 'pct', value = r2s(Number(body.value));
       if (!(value > 0) || (type === 'pct' && value > 100) || value > MAX_AMOUNT) return json(400, { error: 'ערך הנחה לא תקין' });
-      const list = (await s.get('coupons', { type: 'json' })) || []; const old = list.find(x => x.code === code);
+      const list = (await getCoupons(s)); const old = list.find(x => x.code === code);
       const c = { ...(old || { uses: 0, created: Date.now() }), code, type, value, title: str(body.title, 60), min: Math.max(0, r2s(Number(body.min) || 0)), maxUses: Math.max(0, parseInt(body.maxUses, 10) || 0), expires: /^\d{4}-\d{2}-\d{2}$/.test(String(body.expires || '')) ? body.expires : '', scope: ['delivery', 'shop'].includes(body.scope) ? body.scope : 'all', onePerPhone: !!body.onePerPhone, active: body.active !== false };
       if (old) Object.assign(old, c); else list.unshift(c);
       await s.setJSON('coupons', list); return json(200, { ok: true });
     }
     if (a === 'admin-coupon-delete' && req.method === 'POST') {
-      const list = (await s.get('coupons', { type: 'json' })) || []; await s.setJSON('coupons', list.filter(x => x.code !== normCode(body.code))); return json(200, { ok: true });
+      const list = (await getCoupons(s)); await s.setJSON('coupons', list.filter(x => x.code !== normCode(body.code))); return json(200, { ok: true });
     }
     // ---------- מוצרים ומלאי ----------
     if (a === 'admin-products') return json(200, { products: (await getProducts(s)).map(p => ({ ...p, imgUrl: p.img ? '/.netlify/functions/app-api?a=pimg&id=' + p.id + '&v=' + (p.imgV || 1) : '' })) });
