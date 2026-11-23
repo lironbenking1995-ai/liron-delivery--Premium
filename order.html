@@ -142,7 +142,20 @@ h1 span{color:#7e6200}
 #pList li.vat{color:#7e6200;font-weight:800}
 .vatln{display:flex;align-items:center;gap:8px;margin:8px 0 0;padding:8px 12px;border-radius:10px;background:#ffd12c12;border:1px solid #ffd12c40;color:#766729;font-size:.9rem}
 .vatln b{color:#7e6200}
-#missTxt{font-variant-numeric:tabular-nums}#missTxt .vt{display:block;font-size:.72rem;font-weight:800;color:#7e6200;white-space:nowrap}</style>
+#missTxt{font-variant-numeric:tabular-nums}#missTxt .vt{display:block;font-size:.72rem;font-weight:800;color:#7e6200;white-space:nowrap}.cpn{display:flex;gap:8px;margin-top:12px}.cpn input{flex:1;min-width:0;min-height:46px;border-radius:12px;border:1.5px solid #0000001f;background:#fff;color:#1d1d1f;padding:0 12px;font:inherit;font-size:1rem;text-align:right}
+.cpn input:focus{outline:none;border-color:#e3a700;box-shadow:0 0 0 3px #ffd12c55}
+.cpn button{min-height:46px;padding:0 18px;border-radius:12px;border:0;background:#1d1d1f;color:#fff;font:inherit;font-weight:800;cursor:pointer}.cpn button:disabled{opacity:.5}
+.cpn button:focus-visible{outline:3px solid #e3a700;outline-offset:2px}
+.cpm{min-height:20px;margin:6px 2px 0;font-size:.9rem;font-weight:700}.cpm.ok{color:#1a7f45}.cpm.bad{color:#c62828}
+#pList li.disc span:last-child{color:#1a7f45;font-weight:800}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.slday,.sltm{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:thin}
+.slday button,.sltm button{flex:none;min-height:46px;min-width:70px;padding:6px 12px;border-radius:14px;border:1.5px solid #0000001a;background:#fff;color:#1d1d1f;font:inherit;font-weight:800;font-size:.9rem;cursor:pointer;line-height:1.2}
+.slday button small,.sltm button small{display:block;font-weight:600;font-size:.75rem;color:#6e6e73}
+.slday button[aria-checked=true],.sltm button[aria-checked=true]{background:#fff7d6;border-color:#e3a700}
+.sltm button:disabled{opacity:.4;text-decoration:line-through;cursor:not-allowed}
+.slday button:focus-visible,.sltm button:focus-visible{outline:3px solid #1d1d1f;outline-offset:2px}
+</style>
 <style>@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style></head>
 <body>
 <header class="top">
@@ -214,11 +227,20 @@ h1 span{color:#7e6200}
     </div>
   </section>
 
+  <section class="card" id="sSlot" data-name="שעת איסוף" hidden>
+    <h2><span class="n">🕒</span>מתי לאסוף?<small>(לא חובה)</small></h2>
+    <div class="slday" id="slDays" role="radiogroup" aria-label="יום איסוף"></div>
+    <div class="sltm" id="slTimes" role="radiogroup" aria-label="שעת איסוף"></div>
+    <p class="note" id="slNote">בלי בחירה, נאסוף כמה שיותר מהר לפי סוג המשלוח.</p>
+  </section>
+
   <div class="price" id="priceBox" aria-live="polite">
     <div class="big"><span id="pLabel">מחיר המשלוח</span><b id="pTotal">—</b></div>
     <ul id="pList"></ul>
     <p id="pNote">המחיר מחושב אוטומטית לפי גודל החבילות, המרחק בין המוצא ליעד וסוג המשלוח.</p>
     <p class="vatln" id="vatLn">🧾 כל המחירים כוללים מע"מ <b>18%</b></p>
+    <div class="cpn"><label for="cpIn" class="sr">קוד קופון</label><input id="cpIn" maxlength="24" placeholder="יש לכם קוד קופון?" autocomplete="off" autocapitalize="characters" dir="ltr"><button type="button" id="cpBtn">החלה</button></div>
+    <p class="cpm" id="cpMsg" role="status"></p>
   </div>
 
   <section class="card" id="s8" data-name="תשלום">
@@ -318,6 +340,7 @@ function render(){
   if(PR.state==='ok'){$('pTotal').textContent=money(PR.total);PR.lines.forEach(function(l){var li=document.createElement('li');if(l[2])li.className=l[2];li.innerHTML='<span></span><span></span>';li.children[0].textContent=l[0];li.children[1].textContent=l[1];list.appendChild(li)})}
   else if(PR.state==='coord'){$('pTotal').textContent='בתיאום';var li=document.createElement('li');li.textContent=PR.why+'. שולחים את ההזמנה ומתאמים בוואטסאפ.';list.appendChild(li)}
   else $('pTotal').textContent='—';
+  cpSync();
   var coord=PR.state==='coord';$('payCoord').hidden=!coord;
   document.querySelectorAll('#payG .opt').forEach(function(b){var v=b.getAttribute('data-v');b.hidden=coord&&v!=='wa'});
   if(coord)S.pay='wa';
@@ -325,8 +348,8 @@ function render(){
   $('progTxt').textContent=done+' מתוך '+STEPS.length+' שלבים';
   var g=$('goBtn');
   if(firstMiss){$('missTxt').textContent='חסר: '+firstMiss.name;g.textContent='השלימו: '+firstMiss.name;g.dataset.miss=firstMiss.id}
-  else{delete g.dataset.miss;if(PR.state==='ok'){$('missTxt').innerHTML='לתשלום: <bdi dir="ltr">'+money(PR.total)+'</bdi><small class="vt">כולל מע"מ '+VAT+'%</small>'}else $('missTxt').textContent='הכול מוכן לשליחה';
-    g.textContent=S.pay==='card'?'תשלום '+money(PR.total):S.pay==='bit'?'שליחה ותשלום ב-bit':S.pay==='link'?'שליחה ותשלום בקישור':'שליחת ההזמנה בוואטסאפ'}
+  else{delete g.dataset.miss;if(PR.state==='ok'){$('missTxt').innerHTML='לתשלום: <bdi dir="ltr">'+money(FT())+'</bdi><small class="vt">כולל מע"מ '+VAT+'%</small>'}else $('missTxt').textContent='הכול מוכן לשליחה';
+    g.textContent=S.pay==='card'?'תשלום '+money(FT()):S.pay==='bit'?'שליחה ותשלום ב-bit':S.pay==='link'?'שליחה ותשלום בקישור':'שליחת ההזמנה בוואטסאפ'}
   saveDraft();
 }
 // --- events
@@ -348,11 +371,11 @@ function payload(){
   notes.push('מוסר: '+snd);notes.push('מקבל: '+rcv);
   return {fromCity:val('fromCity'),toCity:val('toCity'),fromStreet:val('fromStreet'),toStreet:val('toStreet'),fromFloor:val('fromFloor'),fromApt:val('fromApt'),toFloor:val('toFloor'),toApt:val('toApt'),
     name:payer?val('rName'):val('sName'),phone:payer?val('rPhone'):val('sPhone'),receiver:rcv,sender:snd,payer:S.payer,
-    pkgs:S.pk,kind:S.kind,payMethod:S.pay==='card'?'card':S.pay==='bit'?'bit':'pending',details:notes.join(' | ').slice(0,400),src:'order-page'};
+    pkgs:S.pk,kind:S.kind,payMethod:S.pay==='card'?'card':S.pay==='bit'?'bit':'pending',details:notes.join(' | ').slice(0,400),src:'order-page',coupon:S.cp?S.cp.code:'',slot:S.slot||null};
 }
 function waText(o,j){
   var pk=[S.pk.s&&S.pk.s+' קטנה',S.pk.m&&S.pk.m+' בינונית',S.pk.l&&S.pk.l+' גדולה'].filter(Boolean).join(', ');
-  return ['שלום לירון, הזמנתי משלוח באתר 📦','מספר הזמנה: '+j.id,'חבילות: '+pk,'סוג: '+S.kind,'איסוף: '+o.fromStreet+', '+o.fromCity+(o.fromFloor?' · קומה '+o.fromFloor:''),'מוסר: '+o.sender,'מסירה: '+o.toStreet+', '+o.toCity+(o.toFloor?' · קומה '+o.toFloor:''),'מקבל: '+o.receiver,'מחיר: '+(PR.state==='ok'?money(PR.total)+' (כולל מע"מ '+VAT+'%)':'בתיאום'),'תשלום: '+({card:'אשראי באתר',bit:'bit',link:'קישור תשלום',wa:'מזומן / בתיאום'})[S.pay],'מעקב: '+j.trackUrl].join('\n');
+  return ['שלום לירון, הזמנתי משלוח באתר 📦','מספר הזמנה: '+j.id,'חבילות: '+pk,'סוג: '+S.kind,'איסוף: '+o.fromStreet+', '+o.fromCity+(o.fromFloor?' · קומה '+o.fromFloor:''),'מוסר: '+o.sender,'מסירה: '+o.toStreet+', '+o.toCity+(o.toFloor?' · קומה '+o.toFloor:''),'מקבל: '+o.receiver,'מחיר: '+(PR.state==='ok'?money(PR.total-(S.cp?S.cp.off:0))+' (כולל מע"מ '+VAT+'%)'+(S.cp?' · קופון '+S.cp.code:''):'בתיאום'),(S.slot?'שעת איסוף: '+S.slot.label:''),'תשלום: '+({card:'אשראי באתר',bit:'bit',link:'קישור תשלום',wa:'מזומן / בתיאום'})[S.pay],'מעקב: '+j.trackUrl].filter(Boolean).join('\n');
 }
 function rememberOrder(o,j){try{var a=JSON.parse(localStorage.getItem('myOrders')||'[]');a.unshift({id:j.id,token:j.token,from:canon(o.fromCity)||o.fromCity,to:canon(o.toCity)||o.toCity,at:Date.now()});localStorage.setItem('myOrders',JSON.stringify(a.slice(0,30)))}catch(e){}try{sessionStorage.setItem('ordTrack',j.trackUrl)}catch(e){}}
 function bitCard(amt,ref){
@@ -373,8 +396,8 @@ function showSent(j,msg){
   var g=$('sentGif');g.style.display='';$('sentModal').classList.toggle('isbit',S.pay==='bit');$('sentFb').style.display='none';g.onerror=function(){g.style.display='none';$('sentFb').style.display='block'};g.src='/delivery-sent.gif?v=1&t='+Date.now();
   $('sentId').textContent='מספר הזמנה: '+j.id;var t=$('sentTrack');t.href=j.trackUrl;
   var bb=$('sentBtns');bb.textContent='';
-  if(S.pay==='bit'){$('sentTxt').textContent='ההזמנה נשמרה. נשאר רק לשלם ב-bit:';bb.appendChild(bitCard(r2(PR.total).toFixed(PR.total%1?2:0),'LIR-'+j.id))}
-  else if(S.pay==='link'){$('sentTxt').textContent='ההזמנה נשמרה. בדף התשלום מדביקים את הסכום '+money(PR.total)+' (כולל מע"מ):';var l=document.createElement('a');l.className='btn gold';l.href=LINK;l.target='_blank';l.rel='noopener';l.textContent='לתשלום בקישור · '+money(PR.total);l.addEventListener('click',function(){try{navigator.clipboard.writeText(String(PR.total))}catch(e){}toast('הסכום '+money(PR.total)+' הועתק')});bb.appendChild(l)}
+  if(S.pay==='bit'){$('sentTxt').textContent='ההזמנה נשמרה. נשאר רק לשלם ב-bit:';bb.appendChild(bitCard(FT().toFixed(FT()%1?2:0),'LIR-'+j.id))}
+  else if(S.pay==='link'){$('sentTxt').textContent='ההזמנה נשמרה. בדף התשלום מדביקים את הסכום '+money(FT())+' (כולל מע"מ):';var l=document.createElement('a');l.className='btn gold';l.href=LINK;l.target='_blank';l.rel='noopener';l.textContent='לתשלום בקישור · '+money(FT());l.addEventListener('click',function(){try{navigator.clipboard.writeText(String(FT()))}catch(e){}toast('הסכום '+money(FT())+' הועתק')});bb.appendChild(l)}
   else $('sentTxt').textContent='ההזמנה נשמרה ונפתחה בוואטסאפ. שלחו את ההודעה, ונתאם איתכם איסוף.';
   var w=document.createElement('a');w.className='btn wa';w.href='https://wa.me/'+WA+'?text='+encodeURIComponent(msg);w.target='_blank';w.rel='noopener';w.textContent='שליחת פרטי ההזמנה בוואטסאפ';bb.appendChild(w);
   $('toast').style.display='none';$('sentModal').classList.add('on');
@@ -397,9 +420,33 @@ $('goBtn').addEventListener('click',function(){
     if(S.pay==='wa'){var u='https://wa.me/'+WA+'?text='+encodeURIComponent(msg);if(win&&!win.closed)try{win.location.href=u}catch(e){}}
     showSent(j,msg);
     try{sessionStorage.removeItem('lironOrderDraft');sessionStorage.removeItem('lironOrderFields')}catch(e){}
-  }).catch(function(e){if(win)try{win.close()}catch(_){}err(e.status===429?e.message:(e.message||'לא הצלחנו לשלוח את ההזמנה')+'. נסו שוב או כתבו לנו בוואטסאפ.')})
+  }).catch(function(e){if(win)try{win.close()}catch(_){}if(e.status===409&&S.slot){S.slot=null;loadSlots(SL.date);err(e.message);return}if(e.status===400&&S.cp&&/קופון|נוצל|תוקף|השתמשתם/.test(e.message||'')){S.cp=null;$('cpMsg').textContent=e.message;$('cpMsg').className='cpm bad';render();err(e.message);return}err(e.status===429?e.message:(e.message||'לא הצלחנו לשלוח את ההזמנה')+'. נסו שוב או כתבו לנו בוואטסאפ.')})
   .then(function(){busy=false;g.disabled=false;g.textContent=old;render()});
 });
+// --- קופון
+function FT(){return r2(PR.total-(S.cp&&S.cp.base===PR.total?S.cp.off:0))}
+function cpSync(){var list=$('pList');if(!S.cp)return;if(PR.state!=='ok'||S.cp.base!==PR.total){S.cp=null;$('cpMsg').textContent='המחיר השתנה, החילו את הקופון שוב';$('cpMsg').className='cpm bad';return}
+  var li=document.createElement('li');li.className='disc';li.innerHTML='<span></span><span></span>';li.children[0].textContent='קופון '+S.cp.code+' · '+S.cp.label;li.children[1].textContent='−'+money(S.cp.off);list.appendChild(li);$('pTotal').textContent=money(PR.total-S.cp.off)}
+$('cpBtn').addEventListener('click',function(){var code=$('cpIn').value.trim(),b=this,m=$('cpMsg');if(!code){m.textContent='הקלידו קוד קופון';m.className='cpm bad';return}
+  if(PR.state!=='ok'){m.textContent='קודם בחרו חבילות, כתובות וסוג משלוח כדי שיהיה מחיר';m.className='cpm bad';return}
+  b.disabled=true;m.textContent='בודק…';m.className='cpm';
+  post('coupon-check',{code:code,amount:PR.total,scope:'delivery',phone:val('sPhone')||val('rPhone')}).then(function(j){S.cp={code:j.code,off:j.off,label:j.label,base:PR.total};m.textContent='✓ הקופון הוחל: '+j.label+(j.title?' · '+j.title:'');m.className='cpm ok';render()})
+  .catch(function(e){S.cp=null;m.textContent=e.message||'הקופון לא תקין';m.className='cpm bad';render()}).then(function(){b.disabled=false})});
+$('cpIn').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('cpBtn').click()}});
+// --- תורים: שעת איסוף
+var SL={date:null};var DN=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+function dLabel(d){var x=new Date(d+'T12:00:00'),t=new Date();t.setHours(12,0,0,0);var diff=Math.round((x-t)/864e5);return {top:diff===0?'היום':diff===1?'מחר':'יום '+DN[x.getDay()],sub:d.slice(8)+'/'+d.slice(5,7)}}
+function loadSlots(d){fetch(API+'?a=slots'+(d?'&d='+d:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(!j.on||!j.days||!j.days.length){$('sSlot').hidden=true;S.slot=null;return}
+  $('sSlot').hidden=false;SL.date=j.date;var D=$('slDays');D.textContent='';
+  j.days.forEach(function(d){var b=document.createElement('button');b.type='button';b.setAttribute('role','radio');var l=dLabel(d);b.innerHTML=l.top+'<small>'+l.sub+'</small>';b.setAttribute('aria-checked',String(d===j.date));b.onclick=function(){loadSlots(d)};D.appendChild(b)});
+  var T=$('slTimes');T.textContent='';var any=0;
+  var f=document.createElement('button');f.type='button';f.setAttribute('role','radio');f.innerHTML='כמה שיותר<small>מהר</small>';f.setAttribute('aria-checked',String(!S.slot));f.onclick=function(){S.slot=null;loadSlots(SL.date);render()};T.appendChild(f);
+  j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.setAttribute('role','radio');b.innerHTML='<bdi dir="ltr">'+s.t+'–'+s.end+'</bdi><small>'+(s.left>0?(s.left<=1?'מקום אחרון':'פנוי'):'מלא')+'</small>';b.disabled=s.left<1;if(s.left>0)any++;
+    var on=S.slot&&S.slot.d===j.date&&S.slot.t===s.t;b.setAttribute('aria-checked',String(!!on));
+    b.onclick=function(){var l=dLabel(j.date);S.slot={d:j.date,t:s.t,label:l.top+' '+l.sub+' · '+s.t+'–'+s.end};loadSlots(j.date);render()};T.appendChild(b)});
+  $('slNote').textContent=S.slot?'✓ נאסוף '+S.slot.label.replace(/(\d\d:\d\d)–(\d\d:\d\d)/,'\u2066$1–$2\u2069'):'בלי בחירה, נאסוף כמה שיותר מהר לפי סוג המשלוח.';
+}).catch(function(){$('sSlot').hidden=true})}
+loadSlots();
 if(/[?&]pay=failed/.test(location.search))err('התשלום באשראי לא הושלם ולא חויבתם. אפשר לנסות שוב, או לבחור bit או וואטסאפ.');
 render();
 })();

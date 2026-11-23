@@ -279,6 +279,87 @@ function waOrderText(o, title, site) {
     '', '🔗 ' + (site || 'https://www.liron-delivery.com') + '/app.html#/devorder/' + o.id
   ].filter(x => x !== null && x !== undefined && x !== false).join('\n').replace(/\n(?:\n)+/g, '\n\n').replace(/^\n+|\n+$/g, '');
 }
+// ===================== לידים · קופונים · חנות ומלאי · תורים =====================
+const SHOP_FROM = () => ({ city: 'אשקלון', street: process.env.SHOP_STREET || 'לירון משלוחים', floor: '', apt: '' });
+const r2s = n => Math.round(n * 100) / 100;
+const moneyTxt = n => (n % 1 ? n.toFixed(2) : String(n)) + '₪';
+// ---- זמן ישראל ----
+function ilNow() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return { date: p.year + '-' + p.month + '-' + p.day, min: (+p.hour) * 60 + (+p.minute) };
+}
+const dayOf = d => new Date(d + 'T12:00:00Z').getUTCDay();
+const addDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+// ---- תורים: חלונות איסוף ----
+const SLOT_DEF = { on: false, len: 60, cap: 2, days: 10, lead: 60, hours: { 0: [9, 19], 1: [9, 19], 2: [9, 19], 3: [9, 19], 4: [9, 19], 5: [9, 13], 6: [19, 24] }, off: [] };
+async function slotCfg(s) { return { ...SLOT_DEF, ...((await s.get('slots-cfg', { type: 'json' })) || {}) }; }
+async function slotsFor(s, d, cfg) {
+  cfg = cfg || await slotCfg(s);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return [];
+  const now = ilNow(); if (d < now.date || d > addDays(now.date, cfg.days)) return [];
+  if ((cfg.off || []).includes(d)) return [];
+  const h = cfg.hours[dayOf(d)]; if (!h || !(h[1] > h[0])) return [];
+  const taken = (await s.get('slotc:' + d, { type: 'json' })) || {};
+  const out = [];
+  for (let m = h[0] * 60; m + cfg.len <= h[1] * 60; m += cfg.len) {
+    if (d === now.date && m < now.min + cfg.lead) continue;
+    const t = hhmm(m); out.push({ t, end: hhmm(m + cfg.len), left: Math.max(0, cfg.cap - (taken[t] || 0)) });
+  }
+  return out;
+}
+async function slotTake(s, d, t) {
+  const cfg = await slotCfg(s); if (!cfg.on) return { error: 'בחירת שעת איסוף כבויה כרגע' };
+  const sl = (await slotsFor(s, d, cfg)).find(x => x.t === t);
+  if (!sl) return { error: 'שעת האיסוף שבחרתם כבר לא זמינה. בחרו שעה אחרת.' };
+  if (sl.left < 1) return { error: 'השעה הזאת התמלאה הרגע. בחרו שעה אחרת.' };
+  const k = 'slotc:' + d, m = (await s.get(k, { type: 'json' })) || {}; m[t] = (m[t] || 0) + 1; await s.setJSON(k, m);
+  return { date: d, window: t + '–' + sl.end, slot: t };
+}
+async function slotRelease(s, o) {
+  if (!o || !o.schedule || !o.schedule.slot || o.schedule.released) return;
+  const k = 'slotc:' + o.schedule.date, m = (await s.get(k, { type: 'json' })) || {};
+  if (m[o.schedule.slot]) { m[o.schedule.slot]--; await s.setJSON(k, m); }
+  o.schedule.released = true;
+}
+// ---- קופונים ----
+const normCode = c => String(c || '').trim().toUpperCase().replace(/[^A-Z0-9א-ת_-]/g, '').slice(0, 24);
+async function couponFor(s, code, amount, scope, phone) {
+  code = normCode(code); if (!code) return null;
+  const list = (await s.get('coupons', { type: 'json' })) || [];
+  const c = list.find(x => x.code === code);
+  if (!c || c.active === false) return { error: 'קוד הקופון לא קיים או לא פעיל' };
+  if (c.expires && ilNow().date > c.expires) return { error: 'תוקף הקופון הסתיים' };
+  if (c.maxUses && (c.uses || 0) >= c.maxUses) return { error: 'הקופון כבר נוצל עד הסוף' };
+  if (c.scope && c.scope !== 'all' && c.scope !== scope) return { error: c.scope === 'shop' ? 'הקופון הזה מיועד לחנות בלבד' : 'הקופון הזה מיועד להזמנת משלוח בלבד' };
+  if (!(amount > 0)) return { error: 'אי אפשר להחיל קופון על מחיר בתיאום' };
+  if (c.min && amount < c.min) return { error: 'הקופון תקף מהזמנה של ' + moneyTxt(c.min) + ' ומעלה' };
+  const ph = String(phone || '').replace(/\D/g, '');
+  if (c.onePerPhone && ph && (c.usedBy || []).includes((await sha('cp:' + ph)).slice(0, 16))) return { error: 'כבר השתמשתם בקופון הזה' };
+  let off = c.type === 'pct' ? r2s(amount * Math.min(100, c.value) / 100) : Math.min(c.value, amount);
+  off = Math.min(off, r2s(amount - 1)); if (off <= 0) return { error: 'הקופון לא מתאים לסכום הזה' };
+  return { ok: true, code: c.code, off: r2s(off), label: c.type === 'pct' ? c.value + '% הנחה' : moneyTxt(c.value) + ' הנחה', title: c.title || '' };
+}
+async function couponUse(s, code, phone) {
+  const list = (await s.get('coupons', { type: 'json' })) || []; const c = list.find(x => x.code === code); if (!c) return;
+  c.uses = (c.uses || 0) + 1; const ph = String(phone || '').replace(/\D/g, '');
+  if (c.onePerPhone && ph) { c.usedBy = c.usedBy || []; c.usedBy.push((await sha('cp:' + ph)).slice(0, 16)); c.usedBy = c.usedBy.slice(-2000); }
+  await s.setJSON('coupons', list);
+}
+function applyOff(priceRec, cp) {
+  const total = r2s(priceRec.total - cp.off), net = r2s(total / (1 + VAT_RATE / 100));
+  return { ...priceRec, before: priceRec.total, total, net, vat: r2s(total - net), server: true, coupon: { code: cp.code, off: cp.off, label: cp.label }, text: moneyTxt(total) + ' כולל מע"מ · קופון ' + cp.code + ' (−' + moneyTxt(cp.off) + ')' };
+}
+// ---- מוצרים ----
+async function getProducts(s) { return (await s.get('products', { type: 'json' })) || []; }
+const pubProduct = p => ({ id: p.id, name: p.name, desc: p.desc || '', price: p.price, cat: p.cat || '', img: p.img ? '/.netlify/functions/app-api?a=pimg&id=' + p.id + '&v=' + (p.imgV || 1) : '', stock: p.stock == null ? null : Math.max(0, p.stock), soldOut: p.stock != null && p.stock <= 0, sale: p.was && p.was > p.price ? p.was : null });
+async function stockRestore(s, o) {
+  if (!o || !o.shop || o.shop.restored) return;
+  const list = await getProducts(s);
+  for (const it of o.shop.items || []) { const p = list.find(x => x.id === it.id); if (p && p.stock != null) p.stock += it.qty; }
+  await s.setJSON('products', list); o.shop.restored = true;
+}
+
 const normName = n => String(n || '').replace(/\s+/g, ' ').trim().toLowerCase();
 async function makeCourierSession(s, cid, fp, otp) {
   const tok = rnd(20);
@@ -451,7 +532,7 @@ export default async (req, context) => {
   if (req.method === 'POST') {
     if (!originOk(req, url)) { secLog('blocked cross-site POST', ip, req.headers.get('origin')); return json(403, { error: 'בקשה ממקור לא מורשה' }); }
     if (!/^application\/json/i.test(req.headers.get('content-type') || '')) return json(415, { error: 'בקשה לא תקינה' });
-    if (Number(req.headers.get('content-length') || 0) > 20000) return json(413, { error: 'בקשה גדולה מדי' });
+    if (Number(req.headers.get('content-length') || 0) > (a === 'admin-product-save' ? 480000 : 20000)) return json(413, { error: a === 'admin-product-save' ? 'התמונה גדולה מדי' : 'בקשה גדולה מדי' });
     try { body = await req.json(); } catch { return json(400, { error: 'בקשה לא תקינה' }); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'בקשה לא תקינה' });
   }
@@ -477,6 +558,101 @@ export default async (req, context) => {
     list.unshift({ id: 'R' + Date.now().toString(36).toUpperCase() + rnd(2).toUpperCase(), name, city, stars, text, phone: phoneKey(body.phone).slice(0, 12), at: Date.now(), st: 'new' });
     await s.setJSON('reviews', list.slice(0, 800));
     return json(200, { ok: true });
+  }
+
+  // ---------- טופס לידים ----------
+  if (a === 'lead-add' && req.method === 'POST') {
+    if (str(body.website, 50)) return json(200, { ok: true });
+    const rk = await ipKey('ld:', ip); const rr = await rlGet(s, rk, 864e5);
+    if (rr.n >= 5) return json(429, { error: 'כבר קיבלנו כמה פניות מהמכשיר הזה. נחזור אליכם בהקדם!' });
+    const name = str(body.name, 60), phone = ilPhone(str(body.phone, 20)), biz = str(body.biz, 60), topic = str(body.topic, 40), msg = str(body.msg, 600);
+    if (name.length < 2) return json(400, { error: 'נא לכתוב שם' });
+    if (!phone) return json(400, { error: 'נא לכתוב מספר נייד תקין' });
+    rr.n++; await s.setJSON(rk, rr);
+    const lead = { id: 'D' + Date.now().toString(36).toUpperCase() + rnd(2).toUpperCase(), name, phone, biz, topic, msg, src: str(body.src, 40), at: Date.now(), st: 'new' };
+    const list = (await s.get('leads', { type: 'json' })) || []; list.unshift(lead); await s.setJSON('leads', list.slice(0, 1000));
+    await waBg(['📨 ליד חדש מהאתר', '👤 ' + name + ' · ' + phone, biz ? '🏢 ' + biz : null, topic ? '🏷 ' + topic : null, msg ? '💬 ' + msg : null, '', '📞 https://wa.me/972' + phone.slice(1)].filter(x => x !== null).join('\n'), s);
+    return json(200, { ok: true });
+  }
+  // ---------- קופון: בדיקה ----------
+  if (a === 'coupon-check' && req.method === 'POST') {
+    const rk = await ipKey('cc:', ip); const rr = await rlGet(s, rk, 3600e3);
+    if (rr.n >= 30) return json(429, { error: 'יותר מדי ניסיונות. נסו שוב בעוד שעה.' });
+    rr.n++; await s.setJSON(rk, rr);
+    const amount = Number(body.amount), scope = body.scope === 'shop' ? 'shop' : 'delivery';
+    const r = await couponFor(s, body.code, amount, scope, body.phone);
+    if (!r) return json(400, { error: 'נא להקליד קוד קופון' });
+    if (r.error) return json(400, r);
+    return json(200, { ...r, total: r2s(amount - r.off) });
+  }
+  // ---------- תורים: זמנים פנויים ----------
+  if (a === 'slots') {
+    const cfg = await slotCfg(s);
+    if (!cfg.on) return json(200, { on: false });
+    const now = ilNow(); const days = [];
+    for (let i = 0; i <= cfg.days && days.length < 7; i++) { const d = addDays(now.date, i); const sl = await slotsFor(s, d, cfg); if (sl.some(x => x.left > 0)) days.push(d); }
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(String(url.searchParams.get('d') || '')) ? url.searchParams.get('d') : days[0];
+    return json(200, { on: true, days, date: d || null, slots: d ? await slotsFor(s, d, cfg) : [] });
+  }
+  // ---------- חנות: מוצרים ותמונות ----------
+  if (a === 'products') {
+    const list = (await getProducts(s)).filter(p => p.active !== false).sort((x, y) => (x.ord || 0) - (y.ord || 0));
+    return json(200, { products: list.map(pubProduct) });
+  }
+  if (a === 'pimg') {
+    const id = String(url.searchParams.get('id') || ''); if (!/^P[A-Z0-9]{4,16}$/.test(id)) return json(404, { error: 'לא נמצא' });
+    const im = await s.get('pimg:' + id, { type: 'json' }); if (!im || !im.d) return json(404, { error: 'לא נמצא' });
+    const bin = Uint8Array.from(atob(im.d), c => c.charCodeAt(0));
+    return new Response(bin, { status: 200, headers: { 'content-type': im.t, 'cache-control': 'public, max-age=604800, immutable', 'x-content-type-options': 'nosniff' } });
+  }
+  if (a === 'shop-order' && req.method === 'POST') {
+    const ck = await ipKey('rc:', ip); const cr = await rlGet(s, ck, CREATE_WIN);
+    if (cr.n >= CREATE_MAX) return json(429, { error: 'נשלחו הרבה הזמנות מהמכשיר הזה. נסו שוב בעוד שעה.' });
+    const name = str(body.name, 60), phone = ilPhone(str(body.phone, 20));
+    if (!body.quote && (name.length < 2 || !phone)) return json(400, { error: 'נא למלא שם ומספר נייד תקין' });
+    const items = Array.isArray(body.items) ? body.items.slice(0, 30) : [];
+    const list = await getProducts(s); const lines = []; let sub = 0;
+    for (const it of items) {
+      const p = list.find(x => x.id === String(it.id) && x.active !== false); const q = Math.min(20, Math.max(0, parseInt(it.qty, 10) || 0));
+      if (!p || !q) continue;
+      if (p.stock != null && p.stock < q) return json(409, { error: p.stock > 0 ? 'מ"' + p.name + '" נשארו רק ' + p.stock + ' יחידות' : '"' + p.name + '" אזל מהמלאי', stock: true });
+      lines.push({ id: p.id, name: p.name, qty: q, price: p.price, sum: r2s(p.price * q) }); sub = r2s(sub + p.price * q);
+    }
+    if (!lines.length) return json(400, { error: 'הסל ריק' });
+    const del = body.delivery === 'delivery';
+    let fee = 0, to = { ...SHOP_FROM() };
+    if (del) {
+      const city = str(body.city, 40), street = str(body.street, 80) || (body.quote ? '-' : '');
+      if (!city || !street) return json(400, { error: 'נא למלא כתובת למשלוח' });
+      const pf = price({ fromCity: 'אשקלון', toCity: city, qty: 1, size: 'קטנה', kind: 'מהיום למחר' });
+      if (!pf || pf.needExtra) return json(400, { error: 'לעיר הזאת נתאם מחיר משלוח בוואטסאפ. בחרו איסוף עצמי או כתבו לנו.' });
+      fee = pf.total; to = { city: canon(city) || city, street, floor: str(body.floor, 10), apt: str(body.apt, 10) };
+    }
+    let total = r2s(sub + fee), cp = null;
+    if (body.coupon) { const rk2 = await ipKey('cc:', ip); const rr2 = await rlGet(s, rk2, 3600e3); if (rr2.n >= 30) return json(429, { error: 'יותר מדי ניסיונות קופון. נסו שוב בעוד שעה.' }); rr2.n++; await s.setJSON(rk2, rr2);
+      cp = await couponFor(s, body.coupon, sub, 'shop', phone); if (cp && cp.error) return json(400, cp); if (cp) total = r2s(total - cp.off); }
+    if (body.quote) return json(200, { sub, fee, off: cp ? cp.off : 0, total, coupon: cp ? { code: cp.code, label: cp.label } : null, lines });
+    cr.n++; await s.setJSON(ck, cr);
+    for (const l of lines) { const p = list.find(x => x.id === l.id); if (p.stock != null) p.stock -= l.qty; }
+    await s.setJSON('products', list);
+    if (cp) await couponUse(s, cp.code, phone);
+    const now = Date.now(), net = r2s(total / (1 + VAT_RATE / 100));
+    const mix = lines.map(l => l.qty + ' × ' + l.name).join(', ');
+    const order = {
+      id: newId(), token: rnd(10), createdAt: now, status: 'new', history: [{ s: 'new', at: now }], kind: 'SHOP',
+      customer: { name, phone, receiver: name + ' · ' + phone, sender: 'לירון משלוחים (חנות)', payer: 'receiver' },
+      from: { ...SHOP_FROM(), lat: null, lng: null }, to: { ...to, lat: null, lng: null },
+      pkg: { qty: lines.reduce((a, l) => a + l.qty, 0), size: 'קטנה', kind: del ? 'חנות · משלוח' : 'חנות · איסוף עצמי', mix, care: 'רגיל' },
+      schedule: { date: '', window: '' }, notes: str(body.notes, 300),
+      price: { total, net, vat: r2s(total - net), vatRate: VAT_RATE, extra: 0, agreed: false, server: true, shop: true, text: moneyTxt(total) + ' כולל מע"מ · חנות' + (cp ? ' · קופון ' + cp.code : ''), coupon: cp ? { code: cp.code, off: cp.off, label: cp.label } : null },
+      shop: { items: lines, sub, fee, off: cp ? cp.off : 0, delivery: del },
+      pay: { method: ['card', 'bit'].includes(body.payMethod) ? body.payMethod : 'pending', paid: false }, assignedTo: null, courierName: null, courierPhone: null, src: 'shop'
+    };
+    await s.setJSON('o:' + order.id, order);
+    const idx = await readIdx(s); idx.unshift(order.id); await s.setJSON('idx', idx.slice(0, 1000));
+    const site = process.env.URL || url.origin;
+    await waBg(waOrderText(order, '🛒 הזמנה חדשה מהחנות', site) + '\n🧾 ' + lines.map(l => l.qty + ' × ' + l.name + ' = ' + moneyTxt(l.sum)).join('\n🧾 ') + (fee ? '\n🚚 משלוח ' + moneyTxt(fee) : '\n🏪 איסוף עצמי') + (cp ? '\n🎟 קופון ' + cp.code + ' −' + moneyTxt(cp.off) : ''), s);
+    return json(200, { id: order.id, token: order.token, total, sub, fee, off: cp ? cp.off : 0, trackUrl: site + '/app.html#/track/' + order.id + '.' + order.token });
   }
 
   // ---------- לקוח: יצירת הזמנה ----------
@@ -581,6 +757,16 @@ export default async (req, context) => {
         }
         const co = (await s.get('custOrd:' + cu.id, { type: 'json' })) || []; co.unshift(order.id); await s.setJSON('custOrd:' + cu.id, co.slice(0, 200));
       }
+    }
+    if (o.coupon && order.price && order.price.total > 0) {
+      const cp = await couponFor(s, o.coupon, order.price.total, 'delivery', phone);
+      if (cp && cp.error) return json(400, cp);
+      if (cp) { order.price = applyOff(order.price, cp); await couponUse(s, cp.code, phone); }
+    }
+    if (o.slot && typeof o.slot === 'object') {
+      const sl = await slotTake(s, String(o.slot.d || ''), String(o.slot.t || ''));
+      if (sl.error) return json(409, { error: sl.error, slot: true });
+      order.schedule = { ...order.schedule, ...sl };
     }
     await s.setJSON('o:' + order.id, order);
     const idx = await readIdx(s); idx.unshift(order.id); await s.setJSON('idx', idx.slice(0, 1000));
@@ -770,6 +956,60 @@ export default async (req, context) => {
     if (!role) { await sleep(400); return json(401, { error: 'צריך להתחבר מחדש' }); }
     // ניהול קודי מנהל: רק למפתח
     if (a.startsWith('admin-manager') && role.role !== 'dev') return json(403, { error: 'רק המפתח יכול לנהל קודי מנהל' });
+    // ---------- לידים ----------
+    if (a === 'admin-leads') return json(200, { leads: ((await s.get('leads', { type: 'json' })) || []).slice(0, 500) });
+    if (a === 'admin-lead-set' && req.method === 'POST') {
+      const list = (await s.get('leads', { type: 'json' })) || []; const i = list.findIndex(x => x.id === String(body.id));
+      if (i < 0) return json(404, { error: 'לא נמצא' });
+      if (body.del) list.splice(i, 1); else { if (['new', 'contacted', 'won', 'lost'].includes(body.st)) list[i].st = body.st; if (typeof body.note === 'string') list[i].note = str(body.note, 300); }
+      await s.setJSON('leads', list); return json(200, { ok: true });
+    }
+    // ---------- קופונים ----------
+    if (a === 'admin-coupons') return json(200, { coupons: ((await s.get('coupons', { type: 'json' })) || []).map(({ usedBy, ...c }) => c) });
+    if (a === 'admin-coupon-save' && req.method === 'POST') {
+      const code = normCode(body.code); if (code.length < 3) return json(400, { error: 'קוד של 3 תווים לפחות (אותיות/ספרות)' });
+      const type = body.type === 'fixed' ? 'fixed' : 'pct', value = r2s(Number(body.value));
+      if (!(value > 0) || (type === 'pct' && value > 100) || value > MAX_AMOUNT) return json(400, { error: 'ערך הנחה לא תקין' });
+      const list = (await s.get('coupons', { type: 'json' })) || []; const old = list.find(x => x.code === code);
+      const c = { ...(old || { uses: 0, created: Date.now() }), code, type, value, title: str(body.title, 60), min: Math.max(0, r2s(Number(body.min) || 0)), maxUses: Math.max(0, parseInt(body.maxUses, 10) || 0), expires: /^\d{4}-\d{2}-\d{2}$/.test(String(body.expires || '')) ? body.expires : '', scope: ['delivery', 'shop'].includes(body.scope) ? body.scope : 'all', onePerPhone: !!body.onePerPhone, active: body.active !== false };
+      if (old) Object.assign(old, c); else list.unshift(c);
+      await s.setJSON('coupons', list); return json(200, { ok: true });
+    }
+    if (a === 'admin-coupon-delete' && req.method === 'POST') {
+      const list = (await s.get('coupons', { type: 'json' })) || []; await s.setJSON('coupons', list.filter(x => x.code !== normCode(body.code))); return json(200, { ok: true });
+    }
+    // ---------- מוצרים ומלאי ----------
+    if (a === 'admin-products') return json(200, { products: (await getProducts(s)).map(p => ({ ...p, imgUrl: p.img ? '/.netlify/functions/app-api?a=pimg&id=' + p.id + '&v=' + (p.imgV || 1) : '' })) });
+    if (a === 'admin-product-save' && req.method === 'POST') {
+      const list = await getProducts(s); let p = body.id ? list.find(x => x.id === String(body.id)) : null;
+      if (body.id && !p) return json(404, { error: 'המוצר לא נמצא' });
+      const name = str(body.name, 70), pr = r2s(Number(body.price));
+      if (name.length < 2) return json(400, { error: 'נא לכתוב שם מוצר' });
+      if (!(pr > 0 && pr <= MAX_AMOUNT)) return json(400, { error: 'מחיר לא תקין' });
+      const stock = body.stock === '' || body.stock == null ? null : Math.max(0, parseInt(body.stock, 10) || 0);
+      const was = Number(body.was) > pr ? r2s(Number(body.was)) : null;
+      if (!p) { p = { id: 'P' + Date.now().toString(36).toUpperCase() + rnd(1).toUpperCase(), created: Date.now(), ord: list.length }; list.push(p); }
+      Object.assign(p, { name, price: pr, was, desc: str(body.desc, 400), cat: str(body.cat, 30), stock, active: body.active !== false });
+      if (body.img) {
+        const m = /^data:(image\/(?:webp|jpeg|png));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.img));
+        if (!m || m[2].length > 420000) return json(400, { error: 'התמונה גדולה מדי או לא נתמכת' });
+        await s.setJSON('pimg:' + p.id, { t: m[1], d: m[2] }); p.img = true; p.imgV = (p.imgV || 0) + 1;
+      }
+      if (body.delImg) { await s.delete('pimg:' + p.id).catch(() => {}); p.img = false; }
+      await s.setJSON('products', list); return json(200, { ok: true, id: p.id });
+    }
+    if (a === 'admin-product-delete' && req.method === 'POST') {
+      const list = await getProducts(s); const id = String(body.id);
+      await s.delete('pimg:' + id).catch(() => {}); await s.setJSON('products', list.filter(x => x.id !== id)); return json(200, { ok: true });
+    }
+    // ---------- תורים: הגדרות ----------
+    if (a === 'admin-slots') { const cfg = await slotCfg(s); const now = ilNow(); const up = []; for (let i = 0; i < 7; i++) { const d = addDays(now.date, i); up.push({ d, taken: (await s.get('slotc:' + d, { type: 'json' })) || {} }); } return json(200, { cfg, upcoming: up }); }
+    if (a === 'admin-slots-save' && req.method === 'POST') {
+      const c = body.cfg || {}; const hours = {};
+      for (let d = 0; d < 7; d++) { const h = c.hours && c.hours[d]; if (Array.isArray(h) && h.length === 2) { const a0 = Math.max(0, Math.min(24, parseInt(h[0], 10))), b0 = Math.max(0, Math.min(24, parseInt(h[1], 10))); if (b0 > a0) hours[d] = [a0, b0]; } }
+      const cfg = { on: !!c.on, len: [30, 60, 90, 120].includes(+c.len) ? +c.len : 60, cap: Math.max(1, Math.min(20, parseInt(c.cap, 10) || 1)), days: Math.max(1, Math.min(30, parseInt(c.days, 10) || 10)), lead: Math.max(0, Math.min(600, parseInt(c.lead, 10) || 0)), hours, off: (Array.isArray(c.off) ? c.off : []).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(0, 60) };
+      await s.setJSON('slots-cfg', cfg); return json(200, { ok: true, cfg });
+    }
     // ---------- התראות וואטסאפ: הגדרה ובדיקה ----------
     if (a === 'admin-wa') {
       WA_CFG = null; const c = await waCfg(s);
@@ -975,6 +1215,7 @@ export default async (req, context) => {
       const o = await s.get('o:' + id, { type: 'json' });
       if (!o) return json(404, { error: 'לא נמצא' });
       if (body.status && STATUSES.includes(body.status) && body.status !== o.status) { o.status = body.status; o.history.push({ s: body.status, at: Date.now(), by: 'admin' }); }
+      if (o.status === 'cancelled') { await slotRelease(s, o); await stockRestore(s, o); }
       const wasPaidA = !!o.pay.paid;
       if (typeof body.paid === 'boolean') o.pay.paid = body.paid;
       if (body.method && ['card', 'bit', 'cash', 'pending'].includes(body.method)) o.pay.method = body.method;
@@ -1000,6 +1241,7 @@ export default async (req, context) => {
     if (a === 'admin-delete' && req.method === 'POST') {
       const id = str(body.id, 20);
       if (!ID_RE.test(id)) return json(400, { error: 'לא תקין' });
+      { const od = await s.get('o:' + id, { type: 'json' }); if (od && od.status !== 'delivered') { await slotRelease(s, od); await stockRestore(s, od); } }
       await s.delete('o:' + id);
       const idx = await readIdx(s); await s.setJSON('idx', idx.filter(x => x !== id));
       return json(200, { ok: true });

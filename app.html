@@ -165,6 +165,17 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
 @media(prefers-reduced-motion:reduce){[data-view]:not([hidden]){animation:none}.netbar{transition:none}.tabbar a:active,.btn:active{transform:none}}
 .cwm{position:fixed;inset:-40%;z-index:50;pointer-events:none;display:flex;flex-wrap:wrap;gap:70px 50px;align-content:center;justify-content:center;transform:rotate(-24deg);opacity:.085;font-weight:900;font-size:15px;color:#fff;user-select:none;-webkit-user-select:none}
 .cwm span{white-space:nowrap}
+.biz summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;min-height:44px}.biz summary::-webkit-details-marker{display:none}.biz summary h2{margin:0}
+.biz summary::after{content:"▾";color:#ffd12c;font-weight:900;margin-inline-start:auto;transition:transform .2s}.biz[open] summary::after{transform:rotate(180deg)}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.bgrid .w2{grid-column:1/-1}
+.bgrid label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;font-weight:700;color:#c7c9d1}
+.biz input:not([type=checkbox]):not([type=file]),.biz select,.biz textarea{width:100%;min-height:46px;border-radius:12px;border:1px solid #ffffff32;background:#0b0d12;color:#fff;padding:8px 12px;font-size:.95rem;box-sizing:border-box}
+.biz input[type=file]{color:#c7c9d1;font-size:.85rem}
+.chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700;font-size:.9rem}.chk input{width:20px;height:20px;accent-color:#ffd12c}
+.bi{padding:12px 0;border-top:1px solid #ffffff14}.bi:first-child{border-top:0}.bi .ord-h b{font-size:1rem}
+.bi .dtools .btn{min-height:40px;padding:0 12px;font-size:.86rem}
+.pimg{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#ffffff12;flex:none}
+.slh{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px 10px;align-items:center;margin-top:12px;font-size:.88rem}.slh input{min-height:40px!important}
 </style>
 </head>
 <body>
@@ -474,6 +485,46 @@ details.help p,details.help li{color:#d9dce1;line-height:1.75;font-size:.93rem}d
       <div id="cuDone"></div>
       <div class="dtools"><input id="cuSearch" type="search" placeholder="חיפוש: שם, טלפון, עסק, עיר, מספר לקוח" aria-label="חיפוש לקוחות"></div>
       <div id="cuList"></div></div>
+    <details class="card biz" id="ldCard"><summary><h2>📨 לידים</h2><span class="badge" id="ldN"></span></summary>
+      <p class="muted small">פניות מהטופס "נחזור אליכם" באתר. כל ליד חדש נשלח גם לוואטסאפ.</p>
+      <div class="seg" id="ldSeg"><button type="button" class="on" data-lf="new">חדשים</button><button type="button" data-lf="contacted">בטיפול</button><button type="button" data-lf="done">נסגרו</button></div>
+      <div id="ldList"></div></details>
+    <details class="card biz" id="cpCard"><summary><h2>🎟 קופונים ומבצעים</h2><span class="badge" id="cpN"></span></summary>
+      <p class="muted small">קוד שהלקוח מקליד בהזמנת משלוח או בחנות. ההנחה מחושבת בשרת ומחויבת בדיוק.</p>
+      <div class="bgrid"><label>קוד<input id="cpCode" maxlength="24" dir="ltr" placeholder="WELCOME10" autocapitalize="characters"></label>
+      <label>סוג<select id="cpType"><option value="pct">אחוז הנחה</option><option value="fixed">סכום קבוע ₪</option></select></label>
+      <label>גובה ההנחה<input id="cpVal" type="number" inputmode="decimal" min="0" step="0.1"></label>
+      <label>על מה<select id="cpScope"><option value="all">הכל</option><option value="delivery">משלוחים</option><option value="shop">חנות</option></select></label>
+      <label>מינימום הזמנה ₪<input id="cpMin" type="number" inputmode="decimal" min="0" placeholder="ללא"></label>
+      <label>מקסימום שימושים<input id="cpMax" type="number" inputmode="numeric" min="0" placeholder="ללא הגבלה"></label>
+      <label>בתוקף עד<input id="cpExp" type="date"></label>
+      <label>כותרת (לא חובה)<input id="cpTitle" maxlength="60" placeholder="מבצע חנוכה"></label></div>
+      <label class="chk"><input type="checkbox" id="cpOne"> פעם אחת לכל מספר טלפון</label>
+      <div class="acts"><button type="button" class="btn primary" id="cpSave">שמירת קופון</button></div><p class="err" id="cpErr" role="alert"></p>
+      <div id="cpList"></div></details>
+    <details class="card biz" id="prCard"><summary><h2>🛍 חנות: מוצרים ומלאי</h2><span class="badge" id="prN"></span></summary>
+      <p class="muted small">המוצרים מופיעים בדף <a href="/shop.html" target="_blank" rel="noopener" style="color:#ffd12c">החנות</a>. המלאי יורד אוטומטית בכל הזמנה, וחוזר אם ההזמנה מבוטלת. מלאי ריק = ללא הגבלה.</p>
+      <input type="hidden" id="prId"><div class="bgrid"><label class="w2">שם המוצר<input id="prName" maxlength="70"></label>
+      <label>מחיר ₪ (כולל מע"מ)<input id="prPrice" type="number" inputmode="decimal" min="0" step="0.1"></label>
+      <label>מחיר לפני מבצע ₪<input id="prWas" type="number" inputmode="decimal" min="0" step="0.1" placeholder="לא חובה"></label>
+      <label>מלאי<input id="prStock" type="number" inputmode="numeric" min="0" placeholder="ללא הגבלה"></label>
+      <label>קטגוריה<input id="prCat" maxlength="30" placeholder="אריזה"></label>
+      <label class="w2">תיאור<textarea id="prDesc" maxlength="400" rows="2"></textarea></label>
+      <label class="w2">תמונה<input id="prImg" type="file" accept="image/*"></label></div>
+      <label class="chk"><input type="checkbox" id="prAct" checked> מוצג בחנות</label>
+      <div class="acts"><button type="button" class="btn primary" id="prSave">שמירת מוצר</button><button type="button" class="btn ghost" id="prNew" hidden>מוצר חדש</button></div><p class="err" id="prErr" role="alert"></p>
+      <div id="prList"></div></details>
+    <details class="card biz" id="slCard"><summary><h2>📅 תורים: שעות איסוף</h2><span class="badge" id="slSt"></span></summary>
+      <p class="muted small">כשזה פעיל, הלקוח בוחר בטופס ההזמנה שעת איסוף מתוך זמנים פנויים. כל משבצת מקבלת עד מספר ההזמנות שתגדיר.</p>
+      <label class="chk"><input type="checkbox" id="slOn"> בחירת שעת איסוף פעילה</label>
+      <div class="bgrid"><label>אורך משבצת<select id="slLen"><option value="30">חצי שעה</option><option value="60">שעה</option><option value="90">שעה וחצי</option><option value="120">שעתיים</option></select></label>
+      <label>הזמנות לכל משבצת<input id="slCap" type="number" min="1" max="20"></label>
+      <label>כמה ימים קדימה<input id="slDays" type="number" min="1" max="30"></label>
+      <label>זמן הכנה (דקות)<input id="slLead" type="number" min="0" max="600" step="15"></label></div>
+      <div id="slHours" class="slh"></div>
+      <label class="small" for="slOff" style="display:block;margin-top:8px">ימים סגורים (חגים), מופרדים בפסיק</label><input id="slOff" dir="ltr" placeholder="2026-12-25, 2027-04-22">
+      <div class="acts"><button type="button" class="btn primary" id="slSave">שמירה</button></div><p class="err" id="slErr" role="alert"></p>
+      <div id="slUp" class="small muted"></div></details>
     <div class="card" id="waCard"><div class="ord-h"><h2 style="margin:0">💬 התראות וואטסאפ</h2><span class="badge" id="waSt">…</span></div>
       <p class="muted small" style="margin:6px 0 10px">כל הזמנה חדשה וכל תשלום נשלחים אליך לוואטסאפ עם כל הפרטים: לקוח, כתובות, חבילה, מחיר ומצב התשלום.</p>
       <label class="small" for="waTo">מספר הוואטסאפ שמקבל את ההתראות</label><input id="waTo" type="tel" inputmode="tel" dir="ltr" maxlength="14" autocomplete="off">
@@ -941,6 +992,55 @@ $('rvAdm').addEventListener('click',function(e){var b=e.target.closest('button[d
 function loadWa(){devApi('a=admin-wa').then(function(j){$('waSt').textContent=j.provider?'✅ פעיל':'לא מחובר';$('waSt').className='badge '+(j.provider?'paid':'unpaid');if(!$('waTo').value)$('waTo').value=j.to||'';$('waKeyHint').textContent=j.hasKey?(j.env?'(מוגדר ב-Netlify)':'(שמור · מסתיים ב-'+j.keyTail+')'):'';}).catch(function(){});}
 $('waSave').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-save',{to:$('waTo').value.trim(),key:$('waKey').value.trim()}).then(function(){b.disabled=false;$('waKey').value='';toast('ההגדרות נשמרו');loadWa();}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
 $('waTest').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-test',{}).then(function(){b.disabled=false;toast('נשלחה הודעת בדיקה. בדקו את הוואטסאפ');}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
+/* ---------- כלים לעסק: לידים, קופונים, חנות, תורים ---------- */
+var ldF='new',ldAll=[];
+function loadLeads(){devApi('a=admin-leads').then(function(j){ldAll=j.leads||[];renderLeads();}).catch(function(){});}
+function renderLeads(){var n=ldAll.filter(function(l){return l.st==='new'}).length;$('ldN').textContent=n?n+' חדשים':'';
+  var L=ldAll.filter(function(l){return ldF==='done'?(l.st==='won'||l.st==='lost'):l.st===ldF});
+  $('ldList').innerHTML=L.length?L.map(function(l){var ph=String(l.phone||'');return '<div class="bi" data-id="'+esc(l.id)+'"><div class="ord-h"><b>'+esc(l.name)+(l.biz?' · '+esc(l.biz):'')+'</b><span class="muted small">'+new Date(l.at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'})+'</span></div>'+
+    (l.topic?'<div class="small" style="color:#ffd12c">'+esc(l.topic)+'</div>':'')+(l.msg?'<p style="margin:4px 0">'+esc(l.msg)+'</p>':'')+
+    '<div class="dtools"><a class="btn primary" href="tel:'+esc(ph)+'">📞 '+esc(ph)+'</a><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/972'+esc(ph.replace(/\D/g,'').slice(1))+'">💬 וואטסאפ</a>'+
+    (l.st!=='contacted'?'<button type="button" class="btn ghost" data-st="contacted">🕒 בטיפול</button>':'')+(l.st!=='won'?'<button type="button" class="btn ghost" data-st="won">✅ נסגר</button>':'')+(l.st!=='lost'?'<button type="button" class="btn ghost" data-st="lost">✖ לא רלוונטי</button>':'')+'<button type="button" class="btn ghost" data-del="1" style="color:#ff6b6b">🗑</button></div></div>'}).join(''):'<p class="muted small">אין לידים כאן.</p>';}
+$('ldSeg').addEventListener('click',function(e){var b=e.target.closest('button[data-lf]');if(!b)return;ldF=b.getAttribute('data-lf');[].forEach.call(this.children,function(x){x.classList.toggle('on',x===b)});renderLeads();});
+$('ldList').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var id=b.closest('.bi').getAttribute('data-id');var body={id:id};if(b.hasAttribute('data-del')){if(!b._s){b._s=1;b.textContent='בטוח?';return;}body.del=true}else body.st=b.getAttribute('data-st');
+  devApi('a=admin-lead-set',body).then(function(){toast('עודכן');loadLeads();}).catch(function(er){toast(er.message)});});
+// קופונים
+var cpAll=[];
+function loadCoupons(){devApi('a=admin-coupons').then(function(j){cpAll=j.coupons||[];var act=cpAll.filter(function(c){return c.active!==false}).length;$('cpN').textContent=act?act+' פעילים':'';
+  $('cpList').innerHTML=cpAll.length?cpAll.map(function(c){var exp=c.expires&&c.expires<new Date().toISOString().slice(0,10);return '<div class="bi" data-code="'+esc(c.code)+'"><div class="ord-h"><b dir="ltr">'+esc(c.code)+'</b><span class="badge '+(c.active===false||exp?'unpaid':'paid')+'">'+(c.active===false?'כבוי':exp?'פג תוקף':'פעיל')+'</span></div>'+
+    '<div class="small">'+(c.type==='pct'?c.value+'% הנחה':c.value+'₪ הנחה')+' · '+({all:'הכל',delivery:'משלוחים',shop:'חנות'})[c.scope||'all']+(c.min?' · מ-'+c.min+'₪':'')+(c.expires?' · עד '+c.expires.split('-').reverse().join('/'):'')+(c.onePerPhone?' · פעם לטלפון':'')+'</div>'+
+    '<div class="small muted">נוצל '+(c.uses||0)+(c.maxUses?' מתוך '+c.maxUses:'')+' פעמים'+(c.title?' · '+esc(c.title):'')+'</div>'+
+    '<div class="dtools"><button type="button" class="btn ghost" data-a="edit">✏️ עריכה</button><button type="button" class="btn ghost" data-a="toggle">'+(c.active===false?'▶ הפעלה':'⏸ כיבוי')+'</button><button type="button" class="btn ghost" data-a="del" style="color:#ff6b6b">🗑</button></div></div>'}).join(''):'<p class="muted small">עוד אין קופונים.</p>';}).catch(function(){});}
+function cpBody(c){return {code:c.code,type:c.type,value:c.value,scope:c.scope,min:c.min,maxUses:c.maxUses,expires:c.expires,title:c.title,onePerPhone:c.onePerPhone,active:c.active!==false};}
+$('cpSave').addEventListener('click',function(){var b=this;$('cpErr').textContent='';b.disabled=true;devApi('a=admin-coupon-save',{code:$('cpCode').value,type:$('cpType').value,value:$('cpVal').value,scope:$('cpScope').value,min:$('cpMin').value,maxUses:$('cpMax').value,expires:$('cpExp').value,title:$('cpTitle').value,onePerPhone:$('cpOne').checked,active:true})
+  .then(function(){b.disabled=false;toast('הקופון נשמר');['cpCode','cpVal','cpMin','cpMax','cpExp','cpTitle'].forEach(function(i){$(i).value=''});$('cpOne').checked=false;loadCoupons();}).catch(function(e){b.disabled=false;$('cpErr').textContent=e.message;});});
+$('cpList').addEventListener('click',function(e){var b=e.target.closest('button[data-a]');if(!b)return;var code=b.closest('.bi').getAttribute('data-code'),c=cpAll.find(function(x){return x.code===code}),act=b.getAttribute('data-a');
+  if(act==='edit'){$('cpCode').value=c.code;$('cpType').value=c.type;$('cpVal').value=c.value;$('cpScope').value=c.scope||'all';$('cpMin').value=c.min||'';$('cpMax').value=c.maxUses||'';$('cpExp').value=c.expires||'';$('cpTitle').value=c.title||'';$('cpOne').checked=!!c.onePerPhone;$('cpCode').focus();return;}
+  if(act==='del'){if(!b._s){b._s=1;b.textContent='בטוח?';return;}devApi('a=admin-coupon-delete',{code:code}).then(loadCoupons);return;}
+  var bd=cpBody(c);bd.active=c.active===false;devApi('a=admin-coupon-save',bd).then(loadCoupons).catch(function(er){toast(er.message)});});
+// מוצרים
+var prAll=[],prImgData='';
+function loadProducts(){devApi('a=admin-products').then(function(j){prAll=j.products||[];var low=prAll.filter(function(p){return p.stock!=null&&p.stock<=3}).length;$('prN').textContent=prAll.length+' מוצרים'+(low?' · ⚠️ '+low+' במלאי נמוך':'');
+  $('prList').innerHTML=prAll.length?prAll.map(function(p){return '<div class="bi" data-id="'+esc(p.id)+'"><div style="display:flex;gap:10px;align-items:center">'+(p.imgUrl?'<img class="pimg" src="'+esc(p.imgUrl)+'" alt="">':'<span class="pimg"></span>')+'<div style="flex:1"><b>'+esc(p.name)+'</b>'+(p.active===false?' <span class="badge unpaid">מוסתר</span>':'')+'<div class="small">'+p.price+'₪'+(p.was?' <s class="muted">'+p.was+'₪</s>':'')+' · '+(p.stock==null?'מלאי ללא הגבלה':p.stock<=0?'<span style="color:#ff6b6b">אזל מהמלאי</span>':'במלאי: '+p.stock)+(p.cat?' · '+esc(p.cat):'')+'</div></div></div>'+
+    '<div class="dtools"><button type="button" class="btn ghost" data-a="edit">✏️ עריכה</button><button type="button" class="btn ghost" data-a="plus">+5 למלאי</button><button type="button" class="btn ghost" data-a="del" style="color:#ff6b6b">🗑</button></div></div>'}).join(''):'<p class="muted small">עוד אין מוצרים. הוסיפו מוצר ראשון, והחנות תופיע באתר.</p>';}).catch(function(){});}
+function prBody(p){return {id:p.id,name:p.name,price:p.price,was:p.was||'',stock:p.stock==null?'':p.stock,cat:p.cat||'',desc:p.desc||'',active:p.active!==false};}
+function prReset(){['prId','prName','prPrice','prWas','prStock','prCat','prDesc','prImg'].forEach(function(i){$(i).value=''});$('prAct').checked=true;prImgData='';$('prNew').hidden=true;$('prSave').textContent='שמירת מוצר';}
+$('prImg').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var img=new Image(),u=URL.createObjectURL(f);img.onload=function(){var m=800,w=img.width,h=img.height,k=Math.min(1,m/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);prImgData=c.toDataURL('image/webp',.8);if(prImgData.indexOf('image/webp')<0)prImgData=c.toDataURL('image/jpeg',.82);URL.revokeObjectURL(u);};img.src=u;});
+$('prSave').addEventListener('click',function(){var b=this;$('prErr').textContent='';b.disabled=true;devApi('a=admin-product-save',{id:$('prId').value||undefined,name:$('prName').value,price:$('prPrice').value,was:$('prWas').value,stock:$('prStock').value,cat:$('prCat').value,desc:$('prDesc').value,active:$('prAct').checked,img:prImgData||undefined})
+  .then(function(){b.disabled=false;toast('המוצר נשמר');prReset();loadProducts();}).catch(function(e){b.disabled=false;$('prErr').textContent=e.message;});});
+$('prNew').addEventListener('click',prReset);
+$('prList').addEventListener('click',function(e){var b=e.target.closest('button[data-a]');if(!b)return;var id=b.closest('.bi').getAttribute('data-id'),p=prAll.find(function(x){return x.id===id}),act=b.getAttribute('data-a');
+  if(act==='edit'){$('prId').value=p.id;$('prName').value=p.name;$('prPrice').value=p.price;$('prWas').value=p.was||'';$('prStock').value=p.stock==null?'':p.stock;$('prCat').value=p.cat||'';$('prDesc').value=p.desc||'';$('prAct').checked=p.active!==false;prImgData='';$('prImg').value='';$('prNew').hidden=false;$('prSave').textContent='עדכון מוצר';$('prName').focus();return;}
+  if(act==='del'){if(!b._s){b._s=1;b.textContent='בטוח?';return;}devApi('a=admin-product-delete',{id:id}).then(loadProducts);return;}
+  if(act==='plus'){var bd=prBody(p);bd.stock=(p.stock==null?0:p.stock)+5;devApi('a=admin-product-save',bd).then(function(){toast('המלאי עודכן');loadProducts();}).catch(function(er){toast(er.message)});}});
+// תורים
+var DAYN=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+function loadSlots(){devApi('a=admin-slots').then(function(j){var c=j.cfg;$('slOn').checked=!!c.on;$('slLen').value=c.len;$('slCap').value=c.cap;$('slDays').value=c.days;$('slLead').value=c.lead;$('slOff').value=(c.off||[]).join(', ');$('slSt').textContent=c.on?'✅ פעיל':'כבוי';
+  var h='<b class="small">יום</b><b class="small">משעה</b><b class="small">עד שעה</b>';for(var d=0;d<7;d++){var v=c.hours[d]||['',''];h+='<span>'+DAYN[d]+'</span><input type="number" min="0" max="24" data-d="'+d+'" data-k="0" value="'+v[0]+'" aria-label="'+DAYN[d]+' משעה"><input type="number" min="0" max="24" data-d="'+d+'" data-k="1" value="'+v[1]+'" aria-label="'+DAYN[d]+' עד שעה">';}$('slHours').innerHTML=h;
+  $('slUp').innerHTML='<b>תפוסה בשבוע הקרוב:</b> '+j.upcoming.map(function(u){var n=Object.keys(u.taken).reduce(function(a,k){return a+u.taken[k]},0);return u.d.slice(8)+'/'+u.d.slice(5,7)+': '+n}).join(' · ');}).catch(function(){});}
+$('slSave').addEventListener('click',function(){var b=this,hours={};[].forEach.call($('slHours').querySelectorAll('input'),function(i){var d=i.getAttribute('data-d');hours[d]=hours[d]||['',''];hours[d][+i.getAttribute('data-k')]=i.value;});
+  $('slErr').textContent='';b.disabled=true;devApi('a=admin-slots-save',{cfg:{on:$('slOn').checked,len:$('slLen').value,cap:$('slCap').value,days:$('slDays').value,lead:$('slLead').value,hours:hours,off:$('slOff').value.split(/[,\s]+/).filter(Boolean)}}).then(function(){b.disabled=false;toast('הגדרות התורים נשמרו');loadSlots();}).catch(function(e){b.disabled=false;$('slErr').textContent=e.message;});});
+['ldCard','cpCard','prCard','slCard'].forEach(function(id){$(id).addEventListener('toggle',function(){if(!this.open)return;({ldCard:loadLeads,cpCard:loadCoupons,prCard:loadProducts,slCard:loadSlots})[id]();});});
 function renderDev(){
   var os=dData.orders||[],now=new Date(),d0=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime(),m0=new Date(now.getFullYear(),now.getMonth(),1).getTime();
   var live=os.filter(function(o){return o.status!=='cancelled'});
@@ -957,7 +1057,7 @@ function renderDev(){
     var pts=[];cs.forEach(function(x){var l=x.loc;if(l&&fresh(l)){var ll=[l.lat,l.lng];pts.push(ll);if(dmks[x.id])dmks[x.id].setLatLng(ll);else{dmks[x.id]=L.marker(ll,{icon:truckIcon(),title:x.name}).bindTooltip(x.name,{permanent:true,direction:'top',offset:[0,-22]}).addTo(dmap);}}else if(dmks[x.id]){dmap.removeLayer(dmks[x.id]);delete dmks[x.id];}});
     if(pts.length&&!dmap._fitDone){if(pts.length===1)dmap.setView(pts[0],13);else dmap.fitBounds(pts,{padding:[40,40]});dmap._fitDone=true;}}
   $('dLive').hidden=!sharingN;$('dLocNote').textContent=sharingN?cs.filter(function(x){return fresh(x.loc)}).map(function(x){return x.name+': עודכן '+ago(x.loc.at)}).join(' · '):'אף שליח לא משתף מיקום כרגע.';
-  renderCouriers();renderTrackBoard();loadReviews();if(!window._waL){window._waL=1;loadWa();}
+  renderCouriers();renderTrackBoard();loadReviews();if(!window._waL){window._waL=1;loadWa();}if(!window._bzL){window._bzL=1;loadLeads();}
   renderDevList();
 }
 function loadMgrs(){devApi('a=admin-managers').then(function(j){var box=$('mgrList');box.textContent='';(j.managers||[]).forEach(function(m){var d=document.createElement('div');d.className='dord';
