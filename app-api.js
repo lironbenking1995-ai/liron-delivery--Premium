@@ -325,13 +325,16 @@ async function slotRelease(s, o) {
 // ---- קופונים ----
 // קופונים שמוגדרים מראש. כל אחד נוסף פעם אחת בלבד, ואחר כך אפשר לערוך או למחוק אותו מהניהול.
 const SEED_COUPONS = [
-  { code: 'VIP120', type: 'pct', value: 5, title: 'קופון הצטרפות: 5% הנחה בהזמנה מ-150 ₪', min: 150, maxUses: 0, expires: '', scope: 'all', onePerPhone: true, active: true }
+  { code: 'VIP120', type: 'pct', value: 5, title: 'קופון הצטרפות: 5% הנחה בהזמנה מ-150 ₪', min: 150, maxUses: 0, expires: '2028-05-31', scope: 'all', onePerPhone: true, active: true }
 ];
 async function getCoupons(s) {
   const list = (await s.get('coupons', { type: 'json' })) || [];
   const done = (await s.get('coupon-seeds', { type: 'json' })) || [];
+  // עדכונים חד־פעמיים לקופון שכבר נוצר (אחרי זה אפשר לשנות בניהול)
+  const fixes = [{ id: 'VIP120:exp2028', code: 'VIP120', set: { expires: '2028-05-31' } }].filter(f => !done.includes(f.id));
   const add = SEED_COUPONS.filter(c => !done.includes(c.code));
-  if (!add.length) return list;
+  if (!add.length && !fixes.length) return list;
+  for (const f of fixes) { const c = list.find(x => x.code === f.code); if (c) Object.assign(c, f.set); done.push(f.id); }
   for (const c of add) if (!list.some(x => x.code === c.code)) list.push({ ...c, uses: 0, created: Date.now() });
   await s.setJSON('coupons', list); await s.setJSON('coupon-seeds', done.concat(add.map(c => c.code)));
   return list;
