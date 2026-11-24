@@ -325,7 +325,29 @@ async function slotRelease(s, o) {
 // ---- הפעלה / כיבוי של קבלת הזמנות ----
 const ORD_MSG = 'כרגע לא מקבלים הזמנות חדשות באתר. אפשר לחזור מאוחר יותר או לשלוח הודעה בוואטסאפ.';
 async function ordCfg(s) { const c = (await s.get('ord-cfg', { type: 'json' })) || {}; return { off: !!c.off, shop: !!c.shop, msg: c.msg || '' }; }
-async function courCfg(s) { const c = (await s.get('courier-cfg', { type: 'json' })) || {}; return { noCancel: !!c.noCancel }; }
+async function courCfg(s) { const c = (await s.get('courier-cfg', { type: 'json' })) || {}; return { noCancel: !!c.noCancel, auto: !!c.auto, autoMain: c.autoMain !== false }; }
+// ---- שיבוץ אוטומטי ----
+// בוחרים את השליח הכי פנוי (הכי מעט משלוחים פתוחים). אם יש כמה שווים, הכי קרוב לנקודת האיסוף (לפי מיקום מהשעתיים האחרונות),
+// ואחר כך מי שקיבל משלוח הכי מזמן. שליחים ששיתפו מיקום בשעתיים האחרונות נחשבים במשמרת ומקבלים עדיפות.
+const kmBetween = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lng - a.lng); const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+async function autoAssign(s, order) {
+  try {
+    const cfg = await courCfg(s); if (!cfg.auto) return null;
+    let cands = [MAIN(), ...envCouriers().map(pubCourier), ...(await getCouriers(s)).map(pubCourier)].filter(c => c.active !== false);
+    if (!cfg.autoMain) cands = cands.filter(c => c.id !== 'main');
+    if (!cands.length) return null;
+    const open = new Set(['assigned', 'picked', 'transit']); const load = {}, last = {};
+    for (const o of await readOrders(s, 300)) { if (!o.assignedTo) continue; if (open.has(o.status)) load[o.assignedTo] = (load[o.assignedTo] || 0) + 1; const at = o.createdAt || 0; if (at > (last[o.assignedTo] || 0)) last[o.assignedTo] = at; }
+    const now = Date.now(), from = order.from && order.from.lat ? order.from : null;
+    const rows = await Promise.all(cands.map(async c => { const l = await locOf(s, c.id); const fresh = l && now - l.at < 2 * 3600e3; return { c, load: load[c.id] || 0, on: !!fresh, km: fresh && from ? kmBetween(from, l) : 999, last: last[c.id] || 0 }; }));
+    const pool = rows.some(r => r.on) ? rows.filter(r => r.on) : rows;
+    pool.sort((a, b) => a.load - b.load || a.km - b.km || a.last - b.last);
+    const c = pool[0].c;
+    order.assignedTo = c.id; order.courierName = c.name; order.courierPhone = c.phone;
+    order.status = 'assigned'; order.history.push({ s: 'assigned', at: now, by: 'auto' }); order.autoAssigned = true;
+    return c;
+  } catch (e) { console.warn('[auto-assign]', e && e.message); return null; }
+}
 const ordClosed = msg => json(503, { error: msg || ORD_MSG, closed: true });
 // ---- קופונים ----
 // קופונים שמוגדרים מראש. כל אחד נוסף פעם אחת בלבד, ואחר כך אפשר לערוך או למחוק אותו מהניהול.
@@ -672,10 +694,11 @@ export default async (req, context) => {
       shop: { items: lines, sub, fee, off: cp ? cp.off : 0, delivery: del },
       pay: { method: ['card', 'bit'].includes(body.payMethod) ? body.payMethod : 'pending', paid: false }, assignedTo: null, courierName: null, courierPhone: null, src: 'shop'
     };
+    const autoC = del ? await autoAssign(s, order) : null;
     await s.setJSON('o:' + order.id, order);
     const idx = await readIdx(s); idx.unshift(order.id); await s.setJSON('idx', idx.slice(0, 1000));
     const site = process.env.URL || url.origin;
-    await waBg(waOrderText(order, '🛒 הזמנה חדשה מהחנות', site) + '\n🧾 ' + lines.map(l => l.qty + ' × ' + l.name + ' = ' + moneyTxt(l.sum)).join('\n🧾 ') + (fee ? '\n🚚 משלוח ' + moneyTxt(fee) : '\n🏪 איסוף עצמי') + (cp ? '\n🎟 קופון ' + cp.code + ' −' + moneyTxt(cp.off) : ''), s);
+    await waBg(waOrderText(order, '🛒 הזמנה חדשה מהחנות', site) + (autoC ? '\n🛵 שובץ אוטומטית: ' + autoC.name : '') + '\n🧾 ' + lines.map(l => l.qty + ' × ' + l.name + ' = ' + moneyTxt(l.sum)).join('\n🧾 ') + (fee ? '\n🚚 משלוח ' + moneyTxt(fee) : '\n🏪 איסוף עצמי') + (cp ? '\n🎟 קופון ' + cp.code + ' −' + moneyTxt(cp.off) : ''), s);
     return json(200, { id: order.id, token: order.token, total, sub, fee, off: cp ? cp.off : 0, trackUrl: site + '/app.html#/track/' + order.id + '.' + order.token });
   }
 
@@ -793,10 +816,11 @@ export default async (req, context) => {
       if (sl.error) return json(409, { error: sl.error, slot: true });
       order.schedule = { ...order.schedule, ...sl };
     }
+    const autoC = await autoAssign(s, order);
     await s.setJSON('o:' + order.id, order);
     const idx = await readIdx(s); idx.unshift(order.id); await s.setJSON('idx', idx.slice(0, 1000));
     const site = process.env.URL || url.origin;
-    await waBg(waOrderText(order, '🆕 הזמנה חדשה באתר', site), s);
+    await waBg(waOrderText(order, '🆕 הזמנה חדשה באתר', site) + (autoC ? '\n🛵 שובץ אוטומטית: ' + autoC.name : ''), s);
     return json(200, { id: order.id, token: order.token, trackUrl: `${site}/app.html#/track/${order.id}.${order.token}`, price: order.price });
   }
 
@@ -1038,7 +1062,7 @@ export default async (req, context) => {
     // ---------- התראות וואטסאפ: הגדרה ובדיקה ----------
     if (a === 'admin-ordering') return json(200, await ordCfg(s));
     if (a === 'admin-courier-cfg') return json(200, await courCfg(s));
-    if (a === 'admin-courier-cfg-save' && req.method === 'POST') { const c = { noCancel: !!body.noCancel, at: Date.now() }; await s.setJSON('courier-cfg', c); console.warn('[admin] courier cancel', c.noCancel ? 'BLOCKED' : 'allowed'); return json(200, { ok: true, ...c }); }
+    if (a === 'admin-courier-cfg-save' && req.method === 'POST') { const prev = await courCfg(s); const c = { ...prev, at: Date.now() }; if (body.noCancel !== undefined) c.noCancel = !!body.noCancel; if (body.auto !== undefined) c.auto = !!body.auto; if (body.autoMain !== undefined) c.autoMain = !!body.autoMain; await s.setJSON('courier-cfg', c); console.warn('[admin] courier cfg', JSON.stringify({ noCancel: c.noCancel, auto: c.auto, autoMain: c.autoMain })); return json(200, { ok: true, ...c }); }
     if (a === 'admin-ordering-save' && req.method === 'POST') {
       const c = { off: !!body.off, shop: !!body.shop, msg: str(body.msg, 200), at: Date.now() };
       await s.setJSON('ord-cfg', c); console.warn('[admin] ordering', c.off ? 'OFF' : 'ON'); return json(200, { ok: true, ...c });

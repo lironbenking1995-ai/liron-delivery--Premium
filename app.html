@@ -225,6 +225,8 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
 .awc-n{margin:0;font-size:.88rem;line-height:1.55;color:#3a3a3c}.awc-n b{color:#a1104a}
 .awc-go{display:block;text-align:center;font-weight:800;text-decoration:none;color:#fff!important;background:linear-gradient(90deg,#c2185b,#e0560b);border-radius:14px;padding:12px}.awc-ok{min-height:1em;font-size:.85rem;color:#14703a;font-weight:700}
 @keyframes wcP{0%,100%{box-shadow:0 0 0 0 #ff2d7855}50%{box-shadow:0 0 0 9px #ff2d7800}}@media (prefers-reduced-motion:reduce){.awc-chip{animation:none}}
+
+.autoBox{padding:12px;border-radius:14px;background:#eef6ff;border:1px solid #b9d8ff;margin:4px 0 12px}
 </style></head>
 <body>
 <header class="top">
@@ -518,7 +520,10 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
         <div class="dedit"><label>שם המנהל<input id="nmName" maxlength="40"></label><label>קוד (6 עד 12 ספרות)<input id="nmCode" inputmode="numeric" maxlength="12" autocomplete="off"></label></div>
         <button type="button" class="btn ghost block" id="nmGen" style="margin-top:8px">🎲 יצירת קוד אקראי</button>
         <p class="err" id="nmErr" role="alert"></p><button type="button" class="btn primary block" id="nmSave">שמירת הקוד</button></details></div>
-    <div class="card"><h2>שליחים</h2><p class="muted small" style="margin:0 0 6px">כל שליח נכנס לאפליקציה עם הטלפון והקוד האישי שלו, ורואה מיד את המשלוחים החדשים ואת שלו. לירון נכנס עם קוד השליח הראשי. כל שליח נכנס רק עם הקוד האישי שלו, בלי טלפון.</p><label class="ogSw" for="ncNoCan" style="margin:4px 0 12px"><input type="checkbox" id="ncNoCan" role="switch"><span class="ogK" aria-hidden="true"></span><b id="ncNoCanL">שליחים יכולים לבטל משלוחים</b></label><div id="dCour"></div>
+    <div class="card"><h2>שליחים</h2><p class="muted small" style="margin:0 0 6px">כל שליח נכנס לאפליקציה עם הטלפון והקוד האישי שלו, ורואה מיד את המשלוחים החדשים ואת שלו. לירון נכנס עם קוד השליח הראשי. כל שליח נכנס רק עם הקוד האישי שלו, בלי טלפון.</p><div class="autoBox"><label class="ogSw" for="ncAuto"><input type="checkbox" id="ncAuto" role="switch"><span class="ogK" aria-hidden="true"></span><b id="ncAutoL">שיבוץ אוטומטי כבוי</b></label>
+<p class="muted small" style="margin:6px 0 4px">כשמופעל, כל משלוח חדש משובץ מיד לשליח הכי פנוי. אם יש כמה שליחים פנויים, נבחר הכי קרוב לנקודת האיסוף. שליחים ששיתפו מיקום בשעתיים האחרונות מקבלים עדיפות.</p>
+<label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ncAutoMain"> לשבץ גם אותי (לירון)</label></div>
+<label class="ogSw" for="ncNoCan" style="margin:4px 0 12px"><input type="checkbox" id="ncNoCan" role="switch"><span class="ogK" aria-hidden="true"></span><b id="ncNoCanL">שליחים יכולים לבטל משלוחים</b></label><div id="dCour"></div>
       <details class="help" id="cAddBox"><summary>➕ הוספת שליח</summary>
         <div class="dedit"><label>שם<input id="ncName" maxlength="40"></label><label>טלפון (לא חובה)<input id="ncPhone" type="tel" inputmode="tel" maxlength="20"></label><label class="full">קוד אישי (נוצר אוטומטית, אפשר לשנות)<input id="ncCode" inputmode="numeric" maxlength="12" autocomplete="off"></label></div>
         <button type="button" class="btn ghost block" id="ncGen" style="margin-top:8px">🎲 קוד אקראי אחר</button>
@@ -1051,8 +1056,11 @@ $('rvAdm').addEventListener('click',function(e){var b=e.target.closest('button[d
   var body={id:id};if(act==='ok'||act==='hide')body.st=act;if(act==='del')body.del=true;if(act==='savereply')body.reply=it.querySelector('textarea').value.trim();
   b.disabled=true;devApi('a=admin-review-set',body).then(function(){toast(act==='ok'?'הביקורת פורסמה באתר':act==='hide'?'הביקורת הוסתרה':act==='del'?'הביקורת נמחקה':'התגובה נשמרה');loadReviews(true);}).catch(function(er){b.disabled=false;toast(er.message);});});
 function ogDraw(c){$('ogOn').checked=!c.off;$('ogShop').checked=!!c.shop;$('ogLbl').textContent=c.off?'ההזמנות סגורות':'מקבלים הזמנות';$('ogSt').textContent=c.off?'⏸ סגור':'✅ פתוח';$('ogSt').className='badge '+(c.off?'unpaid':'paid');$('ogCard').classList.toggle('closed',!!c.off);}
-function ncDraw(c){$('ncNoCan').checked=!c.noCancel;$('ncNoCanL').textContent=c.noCancel?'ביטול משלוחים חסום לשליחים':'שליחים יכולים לבטל משלוחים';}
+function ncDraw(c){$('ncAuto').checked=!!c.auto;$('ncAutoMain').checked=c.autoMain!==false;$('ncAutoL').textContent=c.auto?'שיבוץ אוטומטי פועל':'שיבוץ אוטומטי כבוי';$('ncNoCan').checked=!c.noCancel;$('ncNoCanL').textContent=c.noCancel?'ביטול משלוחים חסום לשליחים':'שליחים יכולים לבטל משלוחים';}
 function loadNc(){devApi('a=admin-courier-cfg').then(ncDraw).catch(function(){});}
+function ncSave(d,msg){devApi('a=admin-courier-cfg-save',d).then(function(c){ncDraw(c);toast(msg(c));}).catch(function(e){toast(e.message);loadNc();});}
+$('ncAuto').addEventListener('change',function(){ncSave({auto:this.checked},function(c){return c.auto?'שיבוץ אוטומטי הופעל':'שיבוץ אוטומטי כובה'})});
+$('ncAutoMain').addEventListener('change',function(){ncSave({autoMain:this.checked},function(c){return c.autoMain?'גם אתה תקבל משלוחים בשיבוץ':'השיבוץ רק לשליחים האחרים'})});
 $('ncNoCan').addEventListener('change',function(){var el=this;el.disabled=true;devApi('a=admin-courier-cfg-save',{noCancel:!el.checked}).then(function(c){el.disabled=false;ncDraw(c);toast(c.noCancel?'השליחים לא יכולים לבטל משלוחים':'השליחים יכולים לבטל שוב');}).catch(function(e){el.disabled=false;toast(e.message);loadNc();});});
 function loadOg(){devApi('a=admin-ordering').then(function(c){ogDraw(c);if(!$('ogMsg').value)$('ogMsg').value=c.msg||'';}).catch(function(){});}
 function ogSave(){var b=$('ogSave');b.disabled=true;$('ogErr').textContent='';devApi('a=admin-ordering-save',{off:!$('ogOn').checked,shop:$('ogShop').checked,msg:$('ogMsg').value.trim()}).then(function(c){b.disabled=false;ogDraw(c);toast(c.off?'ההזמנות נסגרו':'ההזמנות נפתחו');}).catch(function(e){b.disabled=false;$('ogErr').textContent=e.message;loadOg();});}
