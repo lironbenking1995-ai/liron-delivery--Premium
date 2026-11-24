@@ -216,6 +216,15 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
 #ogCard .ogSw b{color:var(--cd,#14703a)}#ogCard.closed .ogSw b{color:#b42318}
 #ogCard{--c:#d92d20;--cd:#b42318}
 #ogSt.unpaid{color:#b42318!important;background:#fde7e4!important}#ogSt.paid{color:#14703a!important;background:#e3f6ea!important}
+
+/* קוד הצטרפות במסך הבית */
+.awc{margin:14px 0 4px;padding:16px;border-radius:20px;background:linear-gradient(135deg,#ffe3ee,#fff0d6 60%,#e3efff);border:2px solid #ff2d78;box-shadow:0 18px 40px -26px #ff2d78cc;display:flex;flex-direction:column;gap:8px;text-align:start}
+.awc-tag{align-self:flex-start;font-weight:800;font-size:.8rem;color:#a1104a;background:#ffd6e5;border-radius:99px;padding:3px 10px}.awc-h{font-size:1.25rem;color:#1d1d1f}
+.awc-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;font:inherit;cursor:pointer;background:#fff;border:2px dashed #ff2d78;border-radius:14px;padding:10px 14px;color:#1d1d1f;animation:wcP 2.2s ease-in-out infinite}
+.awc-chip bdi{font-size:1.6rem;font-weight:900;letter-spacing:.08em;direction:ltr}.awc-cp{font-size:.8rem;font-weight:800;color:#fff;background:#c2185b;border-radius:10px;padding:6px 10px}
+.awc-n{margin:0;font-size:.88rem;line-height:1.55;color:#3a3a3c}.awc-n b{color:#a1104a}
+.awc-go{display:block;text-align:center;font-weight:800;text-decoration:none;color:#fff!important;background:linear-gradient(90deg,#c2185b,#e0560b);border-radius:14px;padding:12px}.awc-ok{min-height:1em;font-size:.85rem;color:#14703a;font-weight:700}
+@keyframes wcP{0%,100%{box-shadow:0 0 0 0 #ff2d7855}50%{box-shadow:0 0 0 9px #ff2d7800}}@media (prefers-reduced-motion:reduce){.awc-chip{animation:none}}
 </style></head>
 <body>
 <header class="top">
@@ -228,6 +237,10 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
   <section data-view="home" hidden>
     <h1>שלום! מה נשלח היום?</h1>
     <p class="muted">הזמנה, מעקב חי אחרי השליח ומחירון, הכול במקום אחד.</p>
+      <div class="awc" id="appWc"><span class="awc-tag">🎁 מתנת הצטרפות</span><b class="awc-h">5% הנחה על המשלוח הראשון</b>
+        <button type="button" class="awc-chip" id="awcCopy" aria-label="העתקת קוד ההנחה VIP120"><bdi>VIP120</bdi><span class="awc-cp" aria-hidden="true">העתקה</span></button>
+        <p class="awc-n"><b>ניתן לנצל פעם אחת בלבד, בהצטרפות כלקוח חדש</b> (פעם אחת לכל מספר טלפון). בהזמנה מ־150&nbsp;₪, בתוקף עד 31.5.2028.</p>
+        <a class="awc-go" href="/order.html?coupon=VIP120">להזמנה עם הקוד ←</a><span class="awc-ok" id="awcOk" role="status"></span></div>
     <div class="grid2" style="margin-top:14px">
       <a class="tile hero" href="/index.html#order">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>
@@ -1044,6 +1057,7 @@ $('ncNoCan').addEventListener('change',function(){var el=this;el.disabled=true;d
 function loadOg(){devApi('a=admin-ordering').then(function(c){ogDraw(c);if(!$('ogMsg').value)$('ogMsg').value=c.msg||'';}).catch(function(){});}
 function ogSave(){var b=$('ogSave');b.disabled=true;$('ogErr').textContent='';devApi('a=admin-ordering-save',{off:!$('ogOn').checked,shop:$('ogShop').checked,msg:$('ogMsg').value.trim()}).then(function(c){b.disabled=false;ogDraw(c);toast(c.off?'ההזמנות נסגרו':'ההזמנות נפתחו');}).catch(function(e){b.disabled=false;$('ogErr').textContent=e.message;loadOg();});}
 $('ogOn').addEventListener('change',ogSave);$('ogSave').addEventListener('click',ogSave);
+(function(){var b=$('awcCopy');if(!b)return;b.addEventListener('click',function(){var ok=$('awcOk');try{navigator.clipboard.writeText('VIP120').then(function(){ok.textContent='הקוד הועתק ✓';setTimeout(function(){ok.textContent=''},2500)},function(){ok.textContent='הקוד: VIP120'})}catch(e){ok.textContent='הקוד: VIP120'}})})();
 function loadWa(){devApi('a=admin-wa').then(function(j){$('waSt').textContent=j.provider?'✅ פעיל':'לא מחובר';$('waSt').className='badge '+(j.provider?'paid':'unpaid');if(!$('waTo').value)$('waTo').value=j.to||'';$('waKeyHint').textContent=j.hasKey?(j.env?'(מוגדר ב-Netlify)':'(שמור · מסתיים ב-'+j.keyTail+')'):'';}).catch(function(){});}
 $('waSave').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-save',{to:$('waTo').value.trim(),key:$('waKey').value.trim()}).then(function(){b.disabled=false;$('waKey').value='';toast('ההגדרות נשמרו');loadWa();}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
 $('waTest').addEventListener('click',function(){var b=this;b.disabled=true;$('waErr').textContent='';devApi('a=admin-wa-test',{}).then(function(){b.disabled=false;toast('נשלחה הודעת בדיקה. בדקו את הוואטסאפ');}).catch(function(e){b.disabled=false;$('waErr').textContent=e.message;});});
