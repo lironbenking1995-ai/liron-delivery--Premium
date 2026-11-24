@@ -258,7 +258,7 @@ main>.card h2 .n{background:var(--cd)!important;color:#fff!important;border-colo
       <button type="button" class="opt" role="radio" aria-checked="true" data-v="card"><span class="dot"></span><span><b>אשראי באתר</b><small>תשלום מאובטח, עד 24 תשלומים</small></span></button>
       <button type="button" class="opt" role="radio" aria-checked="false" data-v="bit"><span class="dot"></span><span><b>bit</b><small>מעבירים את הסכום באפליקציית bit</small></span></button>
       <button type="button" class="opt" role="radio" aria-checked="false" data-v="link"><span class="dot"></span><span><b>קישור תשלום מהיר</b><small>אשראי · Apple Pay · Google Pay</small></span></button>
-      <button type="button" class="opt" role="radio" aria-checked="false" data-v="wa"><span class="dot"></span><span><b>תיאום בוואטסאפ</b><small>שולחים את ההזמנה ומתאמים תשלום באשראי או ב-bit</small></span></button>
+      <button type="button" class="opt" role="radio" aria-checked="false" data-v="wa" hidden><span class="dot"></span><span><b>תיאום מחיר בוואטסאפ</b><small>רק למשלוח שהמחיר שלו נקבע בתיאום</small></span></button>
     </div>
     <p class="note warn" id="payCoord" hidden>המחיר של המשלוח הזה נקבע בתיאום, אז שולחים את ההזמנה בוואטסאפ ומתאמים מחיר ותשלום.</p>
     <label class="agree" id="agreeBox"><input type="checkbox" id="agree"><span>קראתי ואני מסכים/ה <a href="/#pricing" target="_blank" rel="noopener" style="color:#7e6200">לתנאי השירות והמחירון</a>, כולל דמי המתנה, שינוי כתובת וביטול.</span></label>
@@ -351,8 +351,8 @@ function render(){
   else $('pTotal').textContent='—';
   cpSync();
   var coord=PR.state==='coord';$('payCoord').hidden=!coord;
-  document.querySelectorAll('#payG .opt').forEach(function(b){var v=b.getAttribute('data-v');b.hidden=coord&&v!=='wa'});
-  if(coord)S.pay='wa';
+  document.querySelectorAll('#payG .opt').forEach(function(b){var v=b.getAttribute('data-v');b.hidden=coord?v!=='wa':v==='wa'});
+  if(coord)S.pay='wa';else if(S.pay==='wa')S.pay='card';
   document.querySelectorAll('#payG .opt').forEach(function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===S.pay))});
   $('progTxt').textContent=done+' מתוך '+STEPS.length+' שלבים';
   var g=$('goBtn');
@@ -384,7 +384,7 @@ function payload(){
 }
 function waText(o,j){
   var pk=[S.pk.s&&S.pk.s+' קטנה',S.pk.m&&S.pk.m+' בינונית',S.pk.l&&S.pk.l+' גדולה'].filter(Boolean).join(', ');
-  return ['שלום לירון, הזמנתי משלוח באתר 📦','מספר הזמנה: '+j.id,'חבילות: '+pk,'סוג: '+S.kind,'איסוף: '+o.fromStreet+', '+o.fromCity+(o.fromFloor?' · קומה '+o.fromFloor:''),'מוסר: '+o.sender,'מסירה: '+o.toStreet+', '+o.toCity+(o.toFloor?' · קומה '+o.toFloor:''),'מקבל: '+o.receiver,'מחיר: '+(PR.state==='ok'?money(PR.total-(S.cp?S.cp.off:0))+' (כולל מע"מ '+VAT+'%)'+(S.cp?' · קופון '+S.cp.code:''):'בתיאום'),(S.slot?'שעת איסוף: '+S.slot.label:''),'תשלום: '+({card:'אשראי באתר',bit:'bit',link:'קישור תשלום',wa:'מזומן / בתיאום'})[S.pay],'מעקב: '+j.trackUrl].filter(Boolean).join('\n');
+  return ['שלום לירון, הזמנתי משלוח באתר 📦','מספר הזמנה: '+j.id,'חבילות: '+pk,'סוג: '+S.kind,'איסוף: '+o.fromStreet+', '+o.fromCity+(o.fromFloor?' · קומה '+o.fromFloor:''),'מוסר: '+o.sender,'מסירה: '+o.toStreet+', '+o.toCity+(o.toFloor?' · קומה '+o.toFloor:''),'מקבל: '+o.receiver,'מחיר: '+(PR.state==='ok'?money(PR.total-(S.cp?S.cp.off:0))+' (כולל מע"מ '+VAT+'%)'+(S.cp?' · קופון '+S.cp.code:''):'בתיאום'),(S.slot?'שעת איסוף: '+S.slot.label:''),'תשלום: '+({card:'אשראי באתר',bit:'bit',link:'קישור תשלום',wa:'בתיאום'})[S.pay],'מעקב: '+j.trackUrl].filter(Boolean).join('\n');
 }
 function rememberOrder(o,j){try{var a=JSON.parse(localStorage.getItem('myOrders')||'[]');a.unshift({id:j.id,token:j.token,from:canon(o.fromCity)||o.fromCity,to:canon(o.toCity)||o.toCity,at:Date.now()});localStorage.setItem('myOrders',JSON.stringify(a.slice(0,30)))}catch(e){}try{sessionStorage.setItem('ordTrack',j.trackUrl)}catch(e){}}
 function bitCard(amt,ref){
@@ -424,7 +424,7 @@ $('goBtn').addEventListener('click',function(){
     if(S.pay==='card'){
       return fetch('/.netlify/functions/pay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId:j.id,name:o.name,phone:o.phone,back:'order'})}).then(function(r){return r.json().catch(function(){return{}}).then(function(d){if(!r.ok||!d.url)throw new Error(d.error||'לא הצלחנו לפתוח את דף התשלום');return d})})
       .then(function(d){$('payAmt').textContent='לתשלום: '+money(d.amount)+' כולל מע"מ '+VAT+'% · מספר הזמנה '+j.id+' · אפשר לחלק עד 24 תשלומים';$('toast').style.display='none';$('payFrame').src=d.url;$('payModal').classList.add('on')})
-      .catch(function(e){err((e.message||'התשלום לא נפתח')+'. ההזמנה נשמרה (מספר '+j.id+'), אפשר לשלם ב-bit או בוואטסאפ.');S.pay='wa';render()});
+      .catch(function(e){err((e.message||'התשלום לא נפתח')+'. ההזמנה נשמרה (מספר '+j.id+'). אפשר לנסות שוב או לבחור תשלום ב-bit.');render()});
     }
     if(S.pay==='wa'){var u='https://wa.me/'+WA+'?text='+encodeURIComponent(msg);if(win&&!win.closed)try{win.location.href=u}catch(e){}}
     showSent(j,msg);
