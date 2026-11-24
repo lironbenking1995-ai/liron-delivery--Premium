@@ -628,6 +628,7 @@ export default async (req, context) => {
     return new Response(bin, { status: 200, headers: { 'content-type': im.t, 'cache-control': 'public, max-age=604800, immutable', 'x-content-type-options': 'nosniff' } });
   }
   if (a === 'shop-order' && req.method === 'POST') {
+    if (body.payMethod === 'cash') return json(400, { error: 'לא מקבלים מזומן. אפשר לשלם באשראי או ב-bit.' });
     { const oc = await ordCfg(s); if (oc.off && oc.shop && !body.quote) return ordClosed(oc.msg); }
     const ck = await ipKey('rc:', ip); const cr = await rlGet(s, ck, CREATE_WIN);
     if (cr.n >= CREATE_MAX) return json(429, { error: 'נשלחו הרבה הזמנות מהמכשיר הזה. נסו שוב בעוד שעה.' });
@@ -761,7 +762,7 @@ export default async (req, context) => {
       pkg: { size, qty: Math.min(150, Math.max(1, parseInt(qty, 10) || 1)), mix, care: str(o.care, 20), kind: str(o.kind, 30) },
       extra, extraTxt: EXTRA_TXT[extra] || '', price: priceRec,
       schedule: { date: str(o.date, 12), window: str(o.window, 20) }, notes: str(o.details, 400),
-      pay: { method: ['card', 'bit', 'cash'].includes(o.payMethod) ? o.payMethod : 'pending', paid: false, deal: null },
+      pay: { method: ['card', 'bit'].includes(o.payMethod) ? o.payMethod : 'pending', paid: false, deal: null },
       assignedTo: null, courierName: null, courierPhone: null
     };
     if (o.kind === 'VIP') {
@@ -1332,7 +1333,7 @@ export default async (req, context) => {
     const [o, err] = await loadMine(str(body.id, 20)); if (err) return err;
     if (!me.admin && (o.assignedTo || (o.status !== 'new' ? 'main' : null)) !== me.id) return json(409, { error: 'אפשר לסמן תשלום רק במשלוח שלך' });
     const wasPaid = !!o.pay.paid;
-    o.pay.paid = !!body.paid; if (body.method && ['card', 'bit', 'cash'].includes(body.method)) o.pay.method = body.method;
+    o.pay.paid = !!body.paid; if (body.method && ['card', 'bit'].includes(body.method)) o.pay.method = body.method;
     await s.setJSON('o:' + o.id, o);
     if (o.pay.paid && !wasPaid) await waBg(waOrderText(o, '💵 התקבל תשלום · סומן ע"י ' + me.name), s);
     return json(200, { ok: true, order: slim(o) });
