@@ -333,7 +333,7 @@ const kmBetween = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLa = 
 async function autoAssign(s, order) {
   try {
     const cfg = await courCfg(s); if (!cfg.auto) return null;
-    let cands = [MAIN(), ...envCouriers().map(pubCourier), ...(await getCouriers(s)).map(pubCourier)].filter(c => c.active !== false);
+    let cands = [MAIN(), ...(await envCouriersLive(s)).map(pubCourier), ...(await getCouriers(s)).map(pubCourier)].filter(c => c.active !== false);
     if (!cfg.autoMain) cands = cands.filter(c => c.id !== 'main');
     if (!cands.length) return null;
     const open = new Set(['assigned', 'picked', 'transit']); const load = {}, last = {};
@@ -420,7 +420,10 @@ function envCouriers() {
     return code.length >= 4 ? { id: 'e' + i, name: p[0], phone: phone || (process.env.COURIER_PHONE || '0525068475'), code, env: true, active: true } : null;
   }).filter(Boolean);
 }
-async function findCourier(s, id) { if (id === 'main') return MAIN(); const e = envCouriers().find(x => x.id === id); if (e) return e; return (await getCouriers(s)).find(x => x.id === id) || null; }
+// שליחים קבועים (מ-Netlify) שהמנהל השבית מהניהול
+async function envOff(s) { return (await s.get('env-cour-off', { type: 'json' })) || []; }
+async function envCouriersLive(s) { const off = await envOff(s); return envCouriers().map(e => ({ ...e, active: !off.includes(e.id) })); }
+async function findCourier(s, id) { if (id === 'main') return MAIN(); const e = (await envCouriersLive(s)).find(x => x.id === id); if (e) return e; return (await getCouriers(s)).find(x => x.id === id) || null; }
 // בודק אם קוד כבר בשימוש אצל מישהו (מפתח, מנהל, שליח)
 async function codeTaken(s, code, exceptId) {
   if (same(process.env.ADMIN_PIN, code) || same(process.env.COURIER_PIN, code)) return true;
@@ -901,7 +904,7 @@ export default async (req, context) => {
     let cid = null, me = null, fp = null, rawPhone = '';
     if (code.length >= 4) {
       if (same(process.env.COURIER_PIN, code)) { cid = 'main'; me = MAIN(); fp = await courierFp(MAIN()); rawPhone = MAIN().phone; }
-      if (!me) { const e = envCouriers().find(c => same(c.code, code)); if (e) { cid = e.id; me = pubCourier(e); fp = await courierFp(e); rawPhone = e.phone; } }
+      if (!me) { const e = (await envCouriersLive(s)).find(c => same(c.code, code)); if (e) { if (!e.active) { await sleep(700); return json(403, { error: 'החשבון שלך מושבת. פנה למנהל.' }); } cid = e.id; me = pubCourier(e); fp = await courierFp(e); rawPhone = e.phone; } }
       if (!me) { const list = await getCouriers(s); for (const c of list) {
         if (!c.salt) continue;
         const h = await sha(c.salt + ':' + code);
@@ -1173,7 +1176,7 @@ export default async (req, context) => {
     if (a === 'admin-list') {
       const orders = (await readOrders(s, 1000)).map(slim);
       const list = await getCouriers(s);
-      const all = [MAIN(), ...envCouriers().map(pubCourier), ...list.map(pubCourier)];
+      const all = [MAIN(), ...(await envCouriersLive(s)).map(pubCourier), ...list.map(pubCourier)];
       const envIds = new Set(envCouriers().map(c => c.id));
       const locs = {}; await Promise.all(all.map(async c => { const l = await locOf(s, c.id); if (l) locs[c.id] = l; }));
       const couriers = all.map(c => ({ ...c, main: c.id === 'main', env: envIds.has(c.id), lastLogin: (list.find(x => x.id === c.id) || {}).lastLogin || null, loc: locs[c.id] || null }));
@@ -1183,6 +1186,32 @@ export default async (req, context) => {
         courierPin: !!process.env.COURIER_PIN, adminPin: true, site: process.env.URL || url.origin, now: Date.now()
       };
       return json(200, { orders, couriers, sys });
+    }
+    if (a === 'admin-courier-active' && req.method === 'POST') {
+      // הפעלה / השבתה של שליח. בהשבתה: משלוחים שעוד לא נאספו חוזרים לחדשים (או משובצים לשליח אחר אם השיבוץ האוטומטי פועל)
+      const id = str(body.id, 20), on = !!body.active;
+      if (id === 'main') return json(400, { error: 'אי אפשר להשבית את השליח הראשי' });
+      if (/^e\d+$/.test(id)) {
+        if (!envCouriers().some(e => e.id === id)) return json(404, { error: 'השליח לא נמצא' });
+        const off = new Set(await envOff(s)); on ? off.delete(id) : off.add(id); await s.setJSON('env-cour-off', [...off]);
+      } else {
+        const list = await getCouriers(s); const c = list.find(x => x.id === id); if (!c) return json(404, { error: 'השליח לא נמצא' });
+        c.active = on; await s.setJSON('couriers', list);
+      }
+      let moved = 0, reassigned = 0, kept = 0;
+      if (!on) {
+        for (const o of await readOrders(s, 300)) {
+          if (o.assignedTo !== id) continue;
+          if (o.status === 'assigned') {
+            o.assignedTo = null; o.courierName = null; o.courierPhone = null; o.status = 'new';
+            o.history.push({ s: 'new', at: Date.now(), by: 'admin', note: 'השליח הושבת' });
+            const nc = await autoAssign(s, o); if (nc) reassigned++; else moved++;
+            await s.setJSON('o:' + o.id, o);
+          } else if (o.status === 'picked' || o.status === 'transit') kept++;
+        }
+      }
+      console.warn('[admin] courier', id, on ? 'activated' : 'deactivated', { moved, reassigned, kept });
+      return json(200, { ok: true, active: on, moved, reassigned, kept });
     }
     if (a === 'admin-courier-save' && req.method === 'POST') {
       const name = str(body.name, 40); let phone = str(body.phone, 20);
@@ -1285,6 +1314,7 @@ export default async (req, context) => {
         else {
           const c = await findCourier(s, body.assignedTo);
           if (!c) return json(400, { error: 'שליח לא קיים' });
+          if (c.active === false) return json(400, { error: 'השליח מושבת. הפעילו אותו קודם ברשימת השליחים' });
           o.assignedTo = c.id; o.courierName = c.name; o.courierPhone = c.phone;
           if (o.status === 'new') { o.status = 'assigned'; o.history.push({ s: 'assigned', at: Date.now(), by: 'admin' }); }
         }

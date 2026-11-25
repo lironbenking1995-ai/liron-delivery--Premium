@@ -227,6 +227,7 @@ section[data-view=my] .card:nth-of-type(4n+1){--c:#0a84ff}section[data-view=my] 
 @keyframes wcP{0%,100%{box-shadow:0 0 0 0 #ff2d7855}50%{box-shadow:0 0 0 9px #ff2d7800}}@media (prefers-reduced-motion:reduce){.awc-chip{animation:none}}
 
 .autoBox{padding:12px;border-radius:14px;background:#eef6ff;border:1px solid #b9d8ff;margin:4px 0 12px}
+.cSw{margin-top:10px;font-size:.98rem}.cSw b{color:#14703a}.cOff{opacity:.78;background:#f4f4f6!important}.cOff .cSw b{color:#b42318}.cOff .cSw{opacity:1}
 </style></head>
 <body>
 <header class="top">
@@ -1203,12 +1204,19 @@ function renderDevOrder(j){
 }
 function renderCouriers(){
   var box=$('dCour');box.textContent='';(dData.couriers||[]).forEach(function(c){
-    var d=document.createElement('div');d.className='dord';
+    var d=document.createElement('div');d.className='dord'+(c.active?'':' cOff');
     var st=c.loc&&Date.now()-c.loc.at<10*60*1000?'<span class="live">משתף מיקום</span>':'';
     var mine=(dData.orders||[]).filter(function(o){return o.assignedTo===c.id&&['assigned','picked','transit'].indexOf(o.status)>=0}).length;
     d.innerHTML='<div class="ord-h"><b>'+esc(c.name)+(c.main?' · ראשי':'')+'</b><span>'+st+' <span class="badge '+(c.active?'paid':'cancelled')+'">'+(c.active?'פעיל':'מושבת')+'</span></span></div><div class="muted small" style="margin-top:4px">'+esc(c.phone)+' · '+mine+' משלוחים בטיפול'+(c.lastLogin?' · התחבר '+fmtTime(c.lastLogin):'')+(c.main?' · נכנס עם קוד השליח הראשי':'')+(c.env?' · קוד קבוע (מוגדר ב-Netlify)':'')+'</div>';
+    if(!c.main){var sw=document.createElement('label');sw.className='ogSw cSw';sw.innerHTML='<input type="checkbox" role="switch"'+(c.active?' checked':'')+'><span class="ogK" aria-hidden="true"></span><b>'+(c.active?'פעיל · מקבל משלוחים':'מושבת · לא יכול להתחבר')+'</b>';
+      var inp=sw.querySelector('input');inp.setAttribute('aria-label',(c.active?'השבתת ':'הפעלת ')+c.name);
+      inp.addEventListener('change',function(){var on=inp.checked;
+        var go=function(){var w=d.querySelector('.cfm');if(w)w.remove();inp.disabled=true;devApi('a=admin-courier-active',{id:c.id,active:on}).then(function(j){
+          var m=on?c.name+' פעיל שוב':c.name+' הושבת';if(!on&&(j.moved||j.reassigned))m+=' · '+(j.reassigned?j.reassigned+' משלוחים עברו לשליח אחר':'')+(j.reassigned&&j.moved?', ':'')+(j.moved?j.moved+' חזרו לחדשים':'');if(!on&&j.kept)m+=' · '+j.kept+' כבר נאספו ונשארו אצלו';toast(m);loadDev();}).catch(function(e){toast(e.message||'לא נשמר');inp.checked=!on;inp.disabled=false;});};
+        if(!on&&mine){inp.checked=true;confirmBox(d,'להשבית את '+c.name+'? יש לו '+mine+' משלוחים בטיפול. משלוחים שעוד לא נאספו יחזרו לחדשים (או יעברו לשליח אחר אם השיבוץ האוטומטי פועל).',function(){inp.checked=false;go();});}
+        else go();});
+      d.appendChild(sw);}
     if(!c.main&&!c.env){var acts=document.createElement('div');acts.className='acts';
-      var tg=document.createElement('button');tg.type='button';tg.className='btn ghost';tg.textContent=c.active?'השבתה':'הפעלה';tg.addEventListener('click',function(){saveCourier({id:c.id,name:c.name,phone:c.phone,active:!c.active},tg)});acts.appendChild(tg);
       var rc=document.createElement('button');rc.type='button';rc.className='btn ghost';rc.textContent='🎲 קוד חדש';rc.addEventListener('click',function(){confirmBox(d,'ליצור ל'+c.name+' קוד חדש? הקוד הישן יפסיק לעבוד.',function(){var w=d.querySelector('.cfm');if(w)w.remove();saveCourier({id:c.id,name:c.name,phone:c.phone,autoCode:true},rc);});});acts.appendChild(rc);
       var wa=document.createElement('a');wa.className='btn ghost';wa.target='_blank';wa.rel='noopener';wa.href='https://wa.me/?text='+encodeURIComponent('שלום '+c.name+', כאן לירון משלוחים 🚚\nנכנסים לאפליקציית השליחים: '+location.origin+'/app.html#/courier\nמקישים את הקוד האישי שקיבלת.');wa.textContent='שליחת קישור';acts.appendChild(wa);
       var dl=document.createElement('button');dl.type='button';dl.className='btn bad';dl.textContent='מחיקה';dl.addEventListener('click',function(){confirmBox(d,'למחוק את השליח '+c.name+'?',function(){devApi('a=admin-courier-delete',{id:c.id}).then(function(){toast('השליח נמחק');loadDev();}).catch(function(e){toast(e.message||'לא נמחק')});});});acts.appendChild(dl);
