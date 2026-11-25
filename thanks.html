@@ -15,7 +15,14 @@ body{background:radial-gradient(70% 40% at 95% 0%,color-mix(in srgb,var(--a1) 16
 h1 span,h1 b{background:linear-gradient(90deg,var(--t1),var(--t2));-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent}
 .kick{background:linear-gradient(90deg,var(--t1),var(--t2))!important;color:#fff!important}
 .box{border-top:5px solid var(--a1)!important}
-</style></head><body>
+</style><!--LIGHTSKIP--><style id="foldfix">
+@media (max-width:1180px){.links{display:none!important}.mobile-menu{display:inline-flex!important}#mBtn.mbtn{display:flex!important}}
+@media (max-width:360px){html,body{overflow-x:hidden}.wrap{width:calc(100% - 20px)!important}.hero h1{font-size:2.35rem!important;word-break:break-word}.navbtns .nav-c{padding:7px 7px!important;font-size:.72rem!important}.top .brand img{width:44px;height:44px}.top .brand-copy{font-size:.95rem}.wcrib{font-size:.85rem;gap:6px;padding:8px 10px}.wc-chip bdi{font-size:1.35rem}}
+img,video,svg,canvas,iframe{max-width:100%}
+#about,.lme-vis{overflow-x:clip}
+section.hero,.stage{overflow-x:clip}
+@media (max-width:360px){.wrap.in{grid-template-columns:minmax(0,1fr)!important}.wrap.in>*{min-width:0}h1,h2{overflow-wrap:anywhere}table{display:block;overflow-x:auto;max-width:100%}.btn,a.btn{white-space:normal;max-width:100%;text-align:center}.ctas,.acts{flex-wrap:wrap}}
+</style><!--/LIGHTSKIP--></head><body>
 <main class="box" id="box"><div class="ic" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".3"></circle></svg></div><h1 id="t">בודקים את התשלום…</h1><p id="m">רק רגע.</p><dl id="d" hidden></dl><div class="btns" id="b" hidden></div><p style="margin:18px 0 0"><a id="toCard" href="/app.html#/card" style="display:none;margin-bottom:14px;padding:14px 22px;border-radius:14px;background:#ffd12c;color:#0a0a0a;font-weight:900;text-decoration:none">👤 חזרה לכרטיס הלקוח שלי</a><br><a href="https://www.liron-delivery.com/" style="color:#7e6200;font-weight:800">🏠 יציאה לדף הראשי</a><script>try{if(new URLSearchParams(location.search).get("back")==="app")document.getElementById("toCard").style.display="inline-block"}catch(e){}</script></p></main>
 <script>
 if(window.top!==window.self){try{window.top.location.href=location.href}catch(e){}}
